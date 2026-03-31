@@ -79,24 +79,8 @@ tr:hover td{background:#f5f3ff;cursor:pointer;}
 
 <div id="app" style="display:none;min-height:100vh;"></div>
 
-<!-- Firebase SDK compat (works in all browsers) -->
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBYx8emBtMkF_Tz3JiqV6dbF1MGgRPcA_o",
-  authDomain: "vilaflora-5d6f0.firebaseapp.com",
-  projectId: "vilaflora-5d6f0",
-  storageBucket: "vilaflora-5d6f0.firebasestorage.app",
-  messagingSenderId: "962899013984",
-  appId: "1:962899013984:web:4009a9407efe3e77726e05",
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// localStorage only - no Firebase dependency
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -143,19 +127,9 @@ const fillTpl = (tpl,vars) => Object.entries(vars).reduce((t,[k,v])=>t.split("{"
 const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 
 // ─── Firebase helpers ─────────────────────────────────────────────────────────
-async function fbGet(docPath) {
-  const parts = docPath.split("/");
-  const snap = await db.collection(parts[0]).doc(parts[1]).get();
-  return snap.exists ? snap.data() : null;
-}
-async function fbSet(docPath, data) {
-  const parts = docPath.split("/");
-  await db.collection(parts[0]).doc(parts[1]).set(data, {merge:true});
-}
-function fbListen(docPath, cb) {
-  const parts = docPath.split("/");
-  return db.collection(parts[0]).doc(parts[1]).onSnapshot(snap => cb(snap.exists ? snap.data() : null));
-}
+function fbGet(docPath) { return null; }
+function fbSet(docPath, data) {}
+function fbListen(docPath, cb) {}
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let state = {
@@ -184,9 +158,9 @@ let state = {
 let _saveTimer = {};
 function saveToFirebase(key, data) {
   clearTimeout(_saveTimer[key]);
-  _saveTimer[key] = setTimeout(async () => {
-    try { await fbSet("vilaflora/"+key, {data: JSON.stringify(data)}); } catch(e) { console.warn("Save error:", e); }
-  }, 800);
+  _saveTimer[key] = setTimeout(() => {
+    try { localStorage.setItem("vf-"+key, JSON.stringify(data)); } catch(e) {}
+  }, 300);
 }
 
 function setState(patch, skipSave) {
@@ -200,36 +174,15 @@ function setState(patch, skipSave) {
   render();
 }
 
-// ─── Load from Firebase on start ─────────────────────────────────────────────
+// ─── Load from localStorage ───────────────────────────────────────────────────
 function loadFromFirebase() {
-  // Show app immediately — do not wait for Firebase
+  try { const v=localStorage.getItem("vf-residents"); if(v) state.residents=JSON.parse(v); } catch(e){}
+  try { const v=localStorage.getItem("vf-invoices");  if(v) state.invoices =JSON.parse(v); } catch(e){}
+  try { const v=localStorage.getItem("vf-settings");  if(v) state.settings ={...DEFAULT_SETTINGS,...JSON.parse(v)}; } catch(e){}
+  try { const v=localStorage.getItem("vf-notifLog");  if(v) state.notifLog =JSON.parse(v); } catch(e){}
   document.getElementById("loading").style.display = "none";
   document.getElementById("app").style.display = "block";
   render();
-
-  // Connect Firebase in background
-  setTimeout(async () => {
-    try {
-      const [r,i,s,l] = await Promise.all([
-        fbGet("vilaflora/residents"),
-        fbGet("vilaflora/invoices"),
-        fbGet("vilaflora/settings"),
-        fbGet("vilaflora/notifLog"),
-      ]);
-      if (r) state.residents = JSON.parse(r.data);
-      if (i) state.invoices  = JSON.parse(i.data);
-      if (s) state.settings  = {...DEFAULT_SETTINGS, ...JSON.parse(s.data)};
-      if (l) state.notifLog  = JSON.parse(l.data);
-      if (!r) saveToFirebase("residents", state.residents);
-      render();
-    } catch(e) { console.warn("Firebase load error:", e.message); }
-    try {
-      fbListen("vilaflora/residents", d => { if(d){state.residents=JSON.parse(d.data);render();}});
-      fbListen("vilaflora/invoices",  d => { if(d){state.invoices =JSON.parse(d.data);render();}});
-      fbListen("vilaflora/settings",  d => { if(d){state.settings={...DEFAULT_SETTINGS,...JSON.parse(d.data)};render();}});
-      fbListen("vilaflora/notifLog",  d => { if(d){state.notifLog=JSON.parse(d.data);render();}});
-    } catch(e) { console.warn("Listener error:", e); }
-  }, 100);
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -605,7 +558,7 @@ function render() {
 const tabContents = [tabHome, tabBanco, tabMoradores, tabAlertas, tabConfig];
 const pad = isMobile ? “14px 14px 90px” : “28px 32px”;
 
-const sidebar = `<div class="sidebar desktop-only"> <div style="padding:28px 20px 24px"> <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6c63ff;margin-bottom:6px">Gestão Condominial</div> <div style="font-size:22px;font-weight:900">Vila <span style="color:#a78bfa">Flora</span></div> <div class="mono" style="margin-top:10px;font-size:13px;color:#a78bfa;font-weight:700">${fmtBRL(grand)}</div> <div style="font-size:10px;color:#6b6b8a;margin-top:2px">total previsto · ${MONTHS_PT[state.selMonth]}</div> <div style="margin-top:8px;display:inline-flex;align-items:center;background:#22c55e18;border-radius:6px;padding:3px 8px"> <span style="font-size:9px;color:#22c55e;font-weight:700">☁️ Firebase sincronizado</span> </div> </div> <nav style="flex:1;padding:0 12px"> ${tabs.map((t,i)=>`
+const sidebar = `<div class="sidebar desktop-only"> <div style="padding:28px 20px 24px"> <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6c63ff;margin-bottom:6px">Gestão Condominial</div> <div style="font-size:22px;font-weight:900">Vila <span style="color:#a78bfa">Flora</span></div> <div class="mono" style="margin-top:10px;font-size:13px;color:#a78bfa;font-weight:700">${fmtBRL(grand)}</div> <div style="font-size:10px;color:#6b6b8a;margin-top:2px">total previsto · ${MONTHS_PT[state.selMonth]}</div> <div style="margin-top:8px;display:inline-flex;align-items:center;background:#22c55e18;border-radius:6px;padding:3px 8px"> <span style="font-size:9px;color:#22c55e;font-weight:700">💾 Auto-salvo</span> </div> </div> <nav style="flex:1;padding:0 12px"> ${tabs.map((t,i)=>`
 <button onclick=“setState({tab:${i}})” style=“width:100%;padding:11px 14px;border-radius:12px;background:${state.tab===i?“rgba(108,99,255,0.18)”:“none”};display:flex;align-items:center;gap:12px;color:${state.tab===i?”#a78bfa”:”#6b6b8a”};margin-bottom:4px;cursor:pointer;position:relative;text-align:left”>
 <div style="opacity:${state.tab===i?1:0.6};display:flex">${icons[i]}</div>
 <span style="font-size:13px;font-weight:${state.tab===i?800:600}">${t}</span>
@@ -625,7 +578,7 @@ const mobileHeader = `<div class="mobile-only" style="background:#1a1a2e;color:#
 <div><span style="font-size:20px;font-weight:900">Vila </span><span style="font-size:20px;font-weight:900;color:#a78bfa">Flora</span></div>
 <div style="text-align:right">
 <div class="mono" style="font-weight:900;font-size:16px;color:#a78bfa">${fmtBRL(grand)}</div>
-<span style="font-size:9px;background:#22c55e22;color:#22c55e;border-radius:5px;padding:1px 6px;font-weight:700">☁️ Sincronizado</span>
+<span style="font-size:9px;background:#22c55e22;color:#22c55e;border-radius:5px;padding:1px 6px;font-weight:700">💾 Salvo</span>
 </div>
 </div>
 
@@ -650,7 +603,7 @@ const editModal = er!==null ? ` <div class="overlay"> <div class="overlay-bg" on
 
 const addInvModal = state.modal===“addInvoice” ? ` <div class="overlay"> <div class="overlay-bg" onclick="setState({modal:null})"></div> ${isMobile?`<div class="sheet-box"><div class="sheet-handle"></div><div style="font-size:17px;font-weight:900;margin-bottom:18px">Lançar Cobrança</div>${addInvContent()}</div>`: `<div class="modal-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:18px;font-weight:900">Lançar Cobrança</div><button onclick="setState({modal:null})" style="width:30px;height:30px;border-radius:50%;background:#f0eff4;font-size:16px;color:#888">✕</button></div>${addInvContent()}</div>`} </div>` : “”;
 
-document.getElementById(“app”).innerHTML = isMobile ? `${mobileHeader} <div style="padding:${pad}">${tabContents[state.tab]}</div> ${bottomNav} ${detailModal}${editModal}${addInvModal}` : `<div style="display:flex;min-height:100vh"> ${sidebar} <div class="main-area"> <div class="topbar"> <div style="font-size:18px;font-weight:900;color:#1a1a2e">${tabs[state.tab]}</div> <span style="font-size:12px;background:#f0fdf4;color:#22c55e;border-radius:8px;padding:4px 10px;font-weight:700">☁️ Firebase sincronizado</span> </div> <div style="flex:1;overflow-y:auto;padding:${pad}">${tabContents[state.tab]}</div> </div> </div> ${detailModal}${editModal}${addInvModal}`;
+document.getElementById(“app”).innerHTML = isMobile ? `${mobileHeader} <div style="padding:${pad}">${tabContents[state.tab]}</div> ${bottomNav} ${detailModal}${editModal}${addInvModal}` : `<div style="display:flex;min-height:100vh"> ${sidebar} <div class="main-area"> <div class="topbar"> <div style="font-size:18px;font-weight:900;color:#1a1a2e">${tabs[state.tab]}</div> <span style="font-size:12px;background:#f0fdf4;color:#22c55e;border-radius:8px;padding:4px 10px;font-weight:700">💾 Auto-salvo</span> </div> <div style="flex:1;overflow-y:auto;padding:${pad}">${tabContents[state.tab]}</div> </div> </div> ${detailModal}${editModal}${addInvModal}`;
 }
 
 function detailContent(dr) {

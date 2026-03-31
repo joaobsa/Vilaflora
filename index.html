@@ -197,35 +197,49 @@ function setState(patch, skipSave) {
 }
 
 // ─── Load from Firebase on start ─────────────────────────────────────────────
+function showApp() {
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  render();
+}
+
 async function loadFromFirebase() {
   document.getElementById("loading-msg").textContent = "Carregando dados...";
+
+  // Timeout: if Firebase takes more than 6s, show app anyway
+  const timeout = setTimeout(() => {
+    document.getElementById("loading-msg").textContent = "Modo offline — dados locais";
+    showApp();
+  }, 6000);
+
   try {
+    const withTimeout = (promise) => Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),5000))]);
     const [r,i,s,l] = await Promise.all([
-      fbGet("vilaflora/residents"),
-      fbGet("vilaflora/invoices"),
-      fbGet("vilaflora/settings"),
-      fbGet("vilaflora/notifLog"),
+      withTimeout(fbGet("vilaflora/residents")),
+      withTimeout(fbGet("vilaflora/invoices")),
+      withTimeout(fbGet("vilaflora/settings")),
+      withTimeout(fbGet("vilaflora/notifLog")),
     ]);
     if (r) state.residents = JSON.parse(r.data);
     if (i) state.invoices  = JSON.parse(i.data);
     if (s) state.settings  = {...DEFAULT_SETTINGS, ...JSON.parse(s.data)};
     if (l) state.notifLog  = JSON.parse(l.data);
-
-    // If no residents in Firebase yet, save initial data
     if (!r) saveToFirebase("residents", state.residents);
+    clearTimeout(timeout);
+    showApp();
   } catch(e) {
-    console.warn("Load error:", e);
+    console.warn("Firebase load error:", e.message);
+    clearTimeout(timeout);
+    showApp();
   }
 
-  // Real-time listeners for multi-admin sync
-  fbListen("vilaflora/residents", d => { if(d) { state.residents=JSON.parse(d.data); render(); }});
-  fbListen("vilaflora/invoices",  d => { if(d) { state.invoices =JSON.parse(d.data); render(); }});
-  fbListen("vilaflora/settings",  d => { if(d) { state.settings ={...DEFAULT_SETTINGS,...JSON.parse(d.data)}; render(); }});
-  fbListen("vilaflora/notifLog",  d => { if(d) { state.notifLog =JSON.parse(d.data); render(); }});
-
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("app").style.display = "block";
-  render();
+  // Real-time listeners
+  try {
+    fbListen("vilaflora/residents", d => { if(d) { state.residents=JSON.parse(d.data); render(); }});
+    fbListen("vilaflora/invoices",  d => { if(d) { state.invoices =JSON.parse(d.data); render(); }});
+    fbListen("vilaflora/settings",  d => { if(d) { state.settings ={...DEFAULT_SETTINGS,...JSON.parse(d.data)}; render(); }});
+    fbListen("vilaflora/notifLog",  d => { if(d) { state.notifLog =JSON.parse(d.data); render(); }});
+  } catch(e) { console.warn("Listener error:", e); }
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

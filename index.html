@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Vila Flora – Gestão Condominial</title>
+<meta name="theme-color" content="#1a1a2e"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:#f0eff4;color:#1a1a2e;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+input,select,textarea{font-family:inherit;outline:none;}
+::-webkit-scrollbar{width:5px;height:4px;}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px;}
+.tap:active{opacity:0.7;transform:scale(0.97);}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.sidebar{width:220px;background:#1a1a2e;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:10;}
+.main-area{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{background:#fff;border-bottom:1px solid #eee;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5;}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.pill{padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.btn-primary{padding:10px 22px;border-radius:12px;background:#6c63ff;color:#fff;font-weight:700;font-size:13px;}
+.section{background:#fff;border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
+.section-title{font-weight:800;font-size:14px;margin-bottom:14px;border-bottom:1px solid #f0eff4;padding-bottom:10px;}
+.field-label{font-size:10px;color:#888;letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:5px;font-weight:700;}
+.field-input{width:100%;padding:11px 13px;border-radius:12px;border:1.5px solid #e8e7f0;background:#f8f8fc;font-size:14px;color:#1a1a2e;margin-bottom:12px;display:block;}
+.field-input:focus{border-color:#6c63ff;}
+.infobox{background:#f8f8fc;border-radius:10px;padding:8px 12px;font-size:11px;color:#888;line-height:1.6;margin-bottom:12px;}
+.mono{font-family:'DM Mono',monospace;}
+.overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;}
+.overlay-bg{position:absolute;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(3px);}
+.modal-box{position:relative;background:#fff;border-radius:20px;padding:28px 30px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.2);animation:fadeUp 0.2s ease;}
+.sheet-box{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:22px 22px 0 0;padding:0 20px 36px;max-height:90vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,0.15);animation:fadeUp 0.2s ease;z-index:301;}
+.sheet-handle{width:36px;height:4px;background:#e0e0e0;border-radius:999px;margin:12px auto 16px;}
+table{width:100%;border-collapse:collapse;}
+th{padding:13px 16px;text-align:left;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;font-weight:600;background:#1a1a2e;}
+td{padding:13px 16px;border-top:1px solid #f4f4f8;font-size:13px;}
+tr:nth-child(even) td{background:#faf9fc;}
+tr:hover td{background:#f5f3ff;cursor:pointer;}
+.progress-track{height:10px;background:#f0eff4;border-radius:999px;overflow:hidden;display:flex;}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;}
+.st-paid{background:#dcfce7;color:#14532d;}
+.st-pending{background:#fef9c3;color:#713f12;}
+.st-overdue{background:#fee2e2;color:#7f1d1d;}
+.nav-btn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;color:#aaa;}
+.nav-btn.active{color:#6c63ff;}
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:999;padding:12px 22px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.25);display:none;white-space:nowrap;max-width:90vw;text-align:center;}
+#loading{position:fixed;inset:0;background:#1a1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+.spinner{width:36px;height:36px;border:4px solid #2e2e46;border-top:4px solid #6c63ff;border-radius:50%;animation:spin 0.8s linear infinite;}
+@media(max-width:767px){
+  .grid-4{grid-template-columns:1fr 1fr;}
+  .grid-2{grid-template-columns:1fr;}
+  .grid-auto{grid-template-columns:1fr;}
+  .desktop-only{display:none!important;}
+  .main-area{margin-left:0;}
+}
+@media(min-width:768px){
+  .mobile-only{display:none!important;}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div id="loading">
+  <div style="font-size:32px;font-weight:900;color:#a78bfa;margin-bottom:4px">Vila Flora</div>
+  <div style="font-size:11px;color:#6b6b8a;letter-spacing:3px;text-transform:uppercase;margin-bottom:32px">Gestão Condominial</div>
+  <div class="spinner"></div>
+  <div id="loading-msg" style="font-size:12px;color:#6b6b8a;margin-top:16px">Conectando ao Firebase...</div>
+</div>
+
+<div id="app" style="display:none;min-height:100vh;"></div>
+
+<!-- Firebase SDK -->
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBYx8emBtMkF_Tz3JiqV6dbF1MGgRPcA_o",
+  authDomain: "vilaflora-5d6f0.firebaseapp.com",
+  projectId: "vilaflora-5d6f0",
+  storageBucket: "vilaflora-5d6f0.firebasestorage.app",
+  messagingSenderId: "962899013984",
+  appId: "1:962899013984:web:4009a9407efe3e77726e05",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const MONTHS_S  = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const CUR_YEAR  = new Date().getFullYear();
+const PLUGGY_API = "https://api.pluggy.ai";
+
+const STATUS = {
+  paid:    {bg:"#dcfce7",text:"#14532d",dot:"#22c55e",label:"Pago",    icon:"✓",cls:"st-paid"},
+  pending: {bg:"#fef9c3",text:"#713f12",dot:"#eab308",label:"Pendente",icon:"⏳",cls:"st-pending"},
+  overdue: {bg:"#fee2e2",text:"#7f1d1d",dot:"#ef4444",label:"Atrasado",icon:"!",cls:"st-overdue"},
+};
+
+const DEFAULT_SETTINGS = {
+  pluggyClientId:"",pluggyClientSecret:"",pluggyItemId:"",
+  gmailClientId:"",whatsappToken:"",whatsappPhoneId:"",
+  senderName:"Administração Vila Flora",baseAmount:300,overdueIntervalDays:2,
+  emailReminderTpl:"Olá {nome},\n\nLembrete: sua taxa condominial de {valor} vence em {vencimento}.\n\nAtenciosamente,\n{remetente}",
+  emailOverdueTpl:"Olá {nome},\n\nSua taxa de {valor} está em ATRASO desde {vencimento}.\n\nAtenciosamente,\n{remetente}",
+  waReminderTpl:"Olá {nome}! 👋\n\nLembrete: taxa de *{valor}* vence em *{vencimento}*.\n\n_{remetente}_",
+  waOverdueTpl:"Olá {nome}! ⚠️\n\nSua taxa de *{valor}* está em *ATRASO* desde *{vencimento}*.\n\n_{remetente}_",
+};
+
+const INIT_RESIDENTS = [
+  {id:1, apt:"1", owner:"",email:"",phone:"",amount:300.01},
+  {id:2, apt:"2", owner:"",email:"",phone:"",amount:300.02},
+  {id:3, apt:"3", owner:"",email:"",phone:"",amount:300.03},
+  {id:4, apt:"4", owner:"",email:"",phone:"",amount:300.04},
+  {id:5, apt:"5", owner:"",email:"",phone:"",amount:300.05},
+  {id:6, apt:"6", owner:"",email:"",phone:"",amount:300.06},
+  {id:7, apt:"7", owner:"",email:"",phone:"",amount:300.07},
+  {id:8, apt:"8", owner:"",email:"",phone:"",amount:300.08},
+  {id:9, apt:"9", owner:"",email:"",phone:"",amount:300.09},
+  {id:10,apt:"10",owner:"",email:"",phone:"",amount:300.10},
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const fmtBRL  = n => "R$ "+Number(n).toLocaleString("pt-BR",{minimumFractionDigits:2});
+const invKey  = (rid,m,y) => rid+"-"+m+"-"+y;
+const todayStr= () => new Date().toISOString().slice(0,10);
+const daysDiff= d => d ? Math.floor((new Date(todayStr())-new Date(d))/86400000) : null;
+const fmtDate = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR") : "—";
+const fillTpl = (tpl,vars) => Object.entries(vars).reduce((t,[k,v])=>t.split("{"+k+"}").join(v),tpl);
+const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+// ─── Firebase helpers ─────────────────────────────────────────────────────────
+async function fbGet(docPath) {
+  const snap = await getDoc(doc(db, ...docPath.split("/")));
+  return snap.exists() ? snap.data() : null;
+}
+async function fbSet(docPath, data) {
+  await setDoc(doc(db, ...docPath.split("/")), data, {merge:true});
+}
+function fbListen(docPath, cb) {
+  return onSnapshot(doc(db, ...docPath.split("/")), snap => cb(snap.exists() ? snap.data() : null));
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let state = {
+  tab: 0,
+  residents: INIT_RESIDENTS,
+  invoices: {},
+  settings: {...DEFAULT_SETTINGS},
+  notifLog: [],
+  selMonth: new Date().getMonth(),
+  selYear: CUR_YEAR,
+  filterSt: "all",
+  modal: null,
+  editRes: null,
+  detailRow: null,
+  connectStep: 0,
+  pluggyApiKey: "",
+  pluggyAccounts: [],
+  pluggySelAcct: "",
+  pluggySyncing: false,
+  pluggyLastSync: null,
+  pluggyMatches: [],
+  syncing: false,
+};
+
+// Save to Firebase (debounced)
+let _saveTimer = {};
+function saveToFirebase(key, data) {
+  clearTimeout(_saveTimer[key]);
+  _saveTimer[key] = setTimeout(async () => {
+    try { await fbSet("vilaflora/"+key, {data: JSON.stringify(data)}); } catch(e) { console.warn("Save error:", e); }
+  }, 800);
+}
+
+function setState(patch, skipSave) {
+  Object.assign(state, patch);
+  if (!skipSave) {
+    if (patch.residents !== undefined) saveToFirebase("residents", state.residents);
+    if (patch.invoices  !== undefined) saveToFirebase("invoices",  state.invoices);
+    if (patch.settings  !== undefined) saveToFirebase("settings",  state.settings);
+    if (patch.notifLog  !== undefined) saveToFirebase("notifLog",  state.notifLog);
+  }
+  render();
+}
+
+// ─── Load from Firebase on start ─────────────────────────────────────────────
+async function loadFromFirebase() {
+  document.getElementById("loading-msg").textContent = "Carregando dados...";
+  try {
+    const [r,i,s,l] = await Promise.all([
+      fbGet("vilaflora/residents"),
+      fbGet("vilaflora/invoices"),
+      fbGet("vilaflora/settings"),
+      fbGet("vilaflora/notifLog"),
+    ]);
+    if (r) state.residents = JSON.parse(r.data);
+    if (i) state.invoices  = JSON.parse(i.data);
+    if (s) state.settings  = {...DEFAULT_SETTINGS, ...JSON.parse(s.data)};
+    if (l) state.notifLog  = JSON.parse(l.data);
+
+    // If no residents in Firebase yet, save initial data
+    if (!r) saveToFirebase("residents", state.residents);
+  } catch(e) {
+    console.warn("Load error:", e);
+  }
+
+  // Real-time listeners for multi-admin sync
+  fbListen("vilaflora/residents", d => { if(d) { state.residents=JSON.parse(d.data); render(); }});
+  fbListen("vilaflora/invoices",  d => { if(d) { state.invoices =JSON.parse(d.data); render(); }});
+  fbListen("vilaflora/settings",  d => { if(d) { state.settings ={...DEFAULT_SETTINGS,...JSON.parse(d.data)}; render(); }});
+  fbListen("vilaflora/notifLog",  d => { if(d) { state.notifLog =JSON.parse(d.data); render(); }});
+
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  render();
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.background = type==="err" ? "#7f1d1d" : "#14532d";
+  el.style.color = "#fff";
+  el.style.display = "block";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display="none", 3500);
+}
+
+// ─── Business logic ───────────────────────────────────────────────────────────
+function getRows() {
+  return state.residents.map(r => {
+    const key = invKey(r.id, state.selMonth, state.selYear);
+    const inv = state.invoices[key];
+    return {r, key, inv, status:inv?inv.status:"pending", amount:inv?inv.amount:r.amount, dueDate:inv?inv.dueDate:"", notes:inv?inv.notes:""};
+  });
+}
+
+function autoOverdue() {
+  const next = {...state.invoices}; let changed = false;
+  Object.entries(next).forEach(([k,inv]) => {
+    if (inv.status==="pending" && inv.dueDate && daysDiff(inv.dueDate)>0) {
+      next[k] = {...inv, status:"overdue"}; changed = true;
+    }
+  });
+  if (changed) setState({invoices:next});
+}
+
+function changeStatus(key, r, st) {
+  const inv = state.invoices[key] || {residentId:r.id, month:state.selMonth, year:state.selYear, amount:r.amount, dueDate:"", notes:""};
+  setState({invoices: {...state.invoices, [key]: {...inv, status:st}}});
+}
+
+function addLog(ch, res, type, st) {
+  const log = [{id:Date.now(), ts:new Date().toLocaleString("pt-BR"), ch, res, type, st}, ...state.notifLog].slice(0,200);
+  setState({notifLog:log});
+}
+
+// ─── Gmail ────────────────────────────────────────────────────────────────────
+let _gapiReady = false;
+async function gapiSend(to, subject, body) {
+  if (!_gapiReady) {
+    await new Promise((res,rej) => { const s=document.createElement("script"); s.src="https://apis.google.com/js/api.js"; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+    _gapiReady = true;
+  }
+  await new Promise(r => window.gapi.load("client:auth2", r));
+  await window.gapi.client.init({clientId:state.settings.gmailClientId, scope:"https://www.googleapis.com/auth/gmail.send", discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"]});
+  const auth = window.gapi.auth2.getAuthInstance();
+  if (!auth.isSignedIn.get()) await auth.signIn();
+  const raw = btoa(unescape(encodeURIComponent("To: "+to+"\r\nSubject: "+subject+"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"+body))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  await window.gapi.client.gmail.users.messages.send({userId:"me", resource:{raw}});
+}
+
+async function waSend(to, body) {
+  const r = await fetch("https://graph.facebook.com/v19.0/"+state.settings.whatsappPhoneId+"/messages", {method:"POST", headers:{Authorization:"Bearer "+state.settings.whatsappToken,"Content-Type":"application/json"}, body:JSON.stringify({messaging_product:"whatsapp", to:to.replace(/\D/g,""), type:"text", text:{body}})});
+  if (!r.ok) throw new Error(await r.text());
+}
+
+async function notify(row, type) {
+  const {r, amount, dueDate} = row;
+  const vars = {nome:r.owner, valor:fmtBRL(amount), vencimento:fmtDate(dueDate), remetente:state.settings.senderName};
+  const isOverdue = type==="overdue"; const errors = [];
+  if (state.settings.gmailClientId && r.email) {
+    try { await gapiSend(r.email, (isOverdue?"⚠️ Atraso":"Lembrete")+" – Casa "+r.apt, fillTpl(isOverdue?state.settings.emailOverdueTpl:state.settings.emailReminderTpl, vars)); addLog("Email","Casa "+r.apt,type,"✅ Enviado"); }
+    catch(e) { errors.push(e.message); addLog("Email","Casa "+r.apt,type,"❌ "+e.message); }
+  } else addLog("Email","Casa "+r.apt,type,r.email?"⚠️ Sem Client ID":"⚠️ Sem e-mail");
+  if (state.settings.whatsappToken && r.phone) {
+    try { await waSend(r.phone, fillTpl(isOverdue?state.settings.waOverdueTpl:state.settings.waReminderTpl, vars)); addLog("WhatsApp","Casa "+r.apt,type,"✅ Enviado"); }
+    catch(e) { errors.push(e.message); addLog("WhatsApp","Casa "+r.apt,type,"❌ "+e.message); }
+  } else addLog("WhatsApp","Casa "+r.apt,type,r.phone?"⚠️ Sem token":"⚠️ Sem telefone");
+  errors.length ? showToast("Erro: "+errors[0],"err") : showToast("Enviado para Casa "+r.apt+"!");
+}
+
+// ─── Pluggy ───────────────────────────────────────────────────────────────────
+async function pluggyConnect() {
+  if (!state.settings.pluggyClientId||!state.settings.pluggyClientSecret) { showToast("Preencha Client ID e Secret nas configurações.","err"); return; }
+  setState({connectStep:1});
+  try {
+    const r = await fetch(PLUGGY_API+"/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clientId:state.settings.pluggyClientId,clientSecret:state.settings.pluggyClientSecret})});
+    if (!r.ok) throw new Error("Credenciais inválidas.");
+    const k = (await r.json()).apiKey;
+    if (!state.settings.pluggyItemId) { setState({pluggyApiKey:k,connectStep:2}); return; }
+    const ar = await fetch(PLUGGY_API+"/accounts?itemId="+state.settings.pluggyItemId,{headers:{"X-API-KEY":k}});
+    setState({pluggyApiKey:k, pluggyAccounts:(await ar.json()).results, connectStep:2});
+  } catch(e) { setState({connectStep:0}); showToast(e.message,"err"); }
+}
+
+async function pluggySync() {
+  if (!state.pluggyApiKey||!state.pluggySelAcct) { showToast("Selecione uma conta primeiro.","err"); return; }
+  setState({pluggySyncing:true});
+  try {
+    const from = new Date(state.selYear,state.selMonth,1).toISOString().slice(0,10);
+    const to   = new Date(state.selYear,state.selMonth+1,0).toISOString().slice(0,10);
+    const tr   = await fetch(PLUGGY_API+"/transactions?accountId="+state.pluggySelAcct+"&from="+from+"&to="+to+"&pageSize=500",{headers:{"X-API-KEY":state.pluggyApiKey}});
+    const txs  = (await tr.json()).results||[];
+    const matched=[]; const newInv={...state.invoices}; let n=0;
+    txs.forEach(tx => {
+      if (tx.type!=="CREDIT"&&tx.amount<=0) return;
+      const amt = Math.abs(tx.amount);
+      const resident = state.residents.find(r=>Math.abs(r.amount-amt)<0.005);
+      if (!resident) return;
+      const txDate = tx.date?tx.date.slice(0,10):todayStr();
+      const key = invKey(resident.id,state.selMonth,state.selYear);
+      matched.push({apt:resident.apt,owner:resident.owner,txDate,amount:amt,txId:tx.id});
+      newInv[key] = {...(newInv[key]||{residentId:resident.id,month:state.selMonth,year:state.selYear,amount:amt,dueDate:"",notes:""}), status:"paid",paidAt:txDate,txId:tx.id};
+      n++;
+    });
+    setState({pluggyMatches:matched,invoices:newInv,connectStep:3,pluggyLastSync:new Date().toLocaleString("pt-BR"),pluggySyncing:false});
+    showToast(n>0?n+" pagamento(s) detectado(s)!":"Nenhum pagamento novo encontrado.");
+  } catch(e) { setState({pluggySyncing:false}); showToast(e.message,"err"); }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  autoOverdue();
+  const isMobile = window.innerWidth < 768;
+  const rows = getRows();
+  const shown = state.filterSt==="all" ? rows : rows.filter(x=>x.status===state.filterSt);
+  const paid    = rows.filter(x=>x.status==="paid").reduce((s,x)=>s+x.amount,0);
+  const pending = rows.filter(x=>x.status==="pending").reduce((s,x)=>s+x.amount,0);
+  const overdue = rows.filter(x=>x.status==="overdue").reduce((s,x)=>s+x.amount,0);
+  const grand   = paid+pending+overdue;
+  const paidPct = grand>0?Math.round(paid/grand*100):0;
+
+  const tabs  = ["Início","Banco","Moradores","Alertas","Config."];
+  const icons = [
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>`,
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/><path d="M2 11h20"/></svg>`,
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87"/></svg>`,
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>`,
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>`,
+  ];
+
+  const summaryCards = [
+    {l:"Total Previsto",v:fmtBRL(grand),   c:"#6c63ff",bg:"#f5f3ff",s:rows.length+" casas"},
+    {l:"Arrecadado",    v:fmtBRL(paid),    c:"#22c55e",bg:"#f0fdf4",s:rows.filter(x=>x.status==="paid").length+" pagas"},
+    {l:"Pendente",      v:fmtBRL(pending), c:"#eab308",bg:"#fefce8",s:rows.filter(x=>x.status==="pending").length+" pendentes"},
+    {l:"Em Atraso",     v:fmtBRL(overdue), c:"#ef4444",bg:"#fef2f2",s:rows.filter(x=>x.status==="overdue").length+" atrasadas"},
+  ].map(c=>`<div class="card" style="background:${c.bg};padding:16px 18px">
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:${c.c};margin-bottom:6px;font-weight:700">${c.l}</div>
+    <div class="mono" style="font-size:${isMobile?"15px":"20px"};font-weight:900;color:${c.c}">${c.v}</div>
+    <div style="font-size:11px;color:#aaa;margin-top:3px">${c.s}</div>
+  </div>`).join("");
+
+  const progressBar = `<div class="card" style="padding:16px 20px;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+      <span style="font-weight:700;font-size:13px">${MONTHS_PT[state.selMonth]} ${state.selYear}</span>
+      <span class="mono" style="font-weight:900;font-size:13px;color:#6c63ff">${paidPct}% arrecadado</span>
+    </div>
+    <div class="progress-track">
+      <div style="width:${grand>0?paid/grand*100:0}%;background:#22c55e;transition:width 0.5s"></div>
+      <div style="width:${grand>0?pending/grand*100:0}%;background:#eab308;transition:width 0.5s"></div>
+      <div style="width:${grand>0?overdue/grand*100:0}%;background:#ef4444;transition:width 0.5s"></div>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:8px">
+      ${[["#22c55e","Pago"],["#eab308","Pendente"],["#ef4444","Atrasado"]].map(([c,l])=>`
+        <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#888">
+          <span style="width:8px;height:8px;border-radius:50%;background:${c};display:inline-block"></span>${l}
+        </span>`).join("")}
+    </div>
+  </div>`;
+
+  const monthPills = `<div style="display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px">
+    ${MONTHS_S.map((m,i)=>`<button class="tap pill" onclick="setState({selMonth:${i}})" style="background:${state.selMonth===i?"#6c63ff":"#e8e7f0"};color:${state.selMonth===i?"#fff":"#888"}">${m}</button>`).join("")}
+  </div>`;
+
+  const pluggyBanner = state.connectStep===3 ? `
+    <div onclick="pluggySync()" style="background:#f0fdf4;border:1.5px solid #22c55e;border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+      <span style="font-size:22px">🏦</span>
+      <div style="flex:1"><div style="font-weight:800;font-size:13px;color:#14532d">Open Finance conectado</div>
+      <div style="font-size:11px;color:#166534">Última sync: ${state.pluggyLastSync||"—"}</div></div>
+      <div style="background:#22c55e;color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:800">${state.pluggySyncing?"⏳":"↻ Sync"}</div>
+    </div>` : `
+    <div onclick="setState({tab:1})" style="background:#eff6ff;border:1.5px dashed #93c5fd;border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+      <span style="font-size:22px">🏦</span>
+      <div style="flex:1"><div style="font-weight:800;font-size:13px;color:#1e40af">Conectar conta bancária</div>
+      <div style="font-size:11px;color:#3b82f6">Detectar pagamentos automaticamente</div></div>
+      <span style="color:#93c5fd;font-size:20px">›</span>
+    </div>`;
+
+  const invoiceCards = shown.map(row => {
+    const sc = STATUS[row.status]; const od = row.status==="overdue"&&row.dueDate?daysDiff(row.dueDate):null;
+    return `<div class="card tap" onclick="openDetail(${row.r.id})" style="padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer">
+      <div style="width:44px;height:44px;border-radius:13px;background:${row.status==="paid"?"#f0fdf4":row.status==="overdue"?"#fef2f2":"#fefce8"};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;font-weight:900;color:${sc.dot}">${sc.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:14px">Casa ${esc(row.r.apt)} ${row.inv&&row.inv.txId?'<span style="font-size:9px;background:#f0fdf4;color:#14532d;border-radius:5px;padding:2px 5px;font-weight:700">🏦 AUTO</span>':""}</div>
+        <div style="font-size:12px;color:#888">${esc(row.r.owner)||"—"}</div>
+        ${row.dueDate?`<div style="font-size:11px;color:${od&&od>0?"#ef4444":"#aaa"}">${od&&od>0?od+"d em atraso":"Vence "+fmtDate(row.dueDate)}</div>`:""}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="mono" style="font-weight:700;font-size:13px">${fmtBRL(row.amount)}</div>
+        <span class="badge ${sc.cls}" style="margin-top:4px;font-size:10px">${sc.label}</span>
+      </div>
+    </div>`;}).join("");
+
+  const invoiceTable = `<div class="card" style="overflow:hidden">
+    <table>
+      <thead><tr>${["Casa","Morador","Valor","Vencimento","Status","Alterar","Notificar"].map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+      <tbody>
+        ${shown.length===0?`<tr><td colspan="7" style="text-align:center;color:#aaa;padding:40px">Nenhum registro.</td></tr>`:""}
+        ${shown.map((row,i) => {
+          const sc=STATUS[row.status]; const od=row.status==="overdue"&&row.dueDate?daysDiff(row.dueDate):null;
+          return `<tr onclick="openDetail(${row.r.id})">
+            <td style="font-weight:800;font-size:14px">Casa ${esc(row.r.apt)} ${row.inv&&row.inv.txId?'<span style="font-size:9px;background:#f0fdf4;color:#14532d;border-radius:4px;padding:2px 5px;font-weight:700">🏦</span>':""}</td>
+            <td style="color:#555">${esc(row.r.owner)||"—"}</td>
+            <td class="mono" style="font-weight:600">${fmtBRL(row.amount)}</td>
+            <td style="color:${od&&od>0?"#ef4444":"#888"}">${fmtDate(row.dueDate)}${od&&od>0?`<div style="font-size:10px;color:#ef4444">${od}d atrasado</div>`:""}</td>
+            <td onclick="event.stopPropagation()"><span class="badge ${sc.cls}"><span style="width:6px;height:6px;border-radius:50%;background:${sc.dot};display:inline-block"></span>${sc.label}</span></td>
+            <td onclick="event.stopPropagation()">
+              <div style="display:flex;gap:4px">
+                ${["paid","pending","overdue"].map(s=>`<button class="tap" onclick="changeStatusUI('${row.key}',${row.r.id},'${s}')" style="padding:4px 8px;border-radius:7px;font-size:10px;background:${row.status===s?STATUS[s].dot:"#f0eff4"};color:${row.status===s?"#fff":"#777"};font-weight:700">${STATUS[s].label}</button>`).join("")}
+              </div>
+            </td>
+            <td onclick="event.stopPropagation()">
+              <div style="display:flex;gap:5px">
+                <button class="tap" onclick="notifyUI(${row.r.id},'reminder')" ${row.status==="paid"?"disabled":""} style="padding:5px 9px;border-radius:7px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:600;opacity:${row.status==="paid"?0.35:1}">📧</button>
+                <button class="tap" onclick="notifyUI(${row.r.id},'overdue')" ${row.status!=="overdue"?"disabled":""} style="padding:5px 9px;border-radius:7px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;font-size:10px;font-weight:600;opacity:${row.status!=="overdue"?0.35:1}">⚠️</button>
+              </div>
+            </td>
+          </tr>`;}).join("")}
+      </tbody>
+    </table>
+  </div>`;
+
+  const tabHome = `
+    <div class="grid-4">${summaryCards}</div>
+    ${progressBar}
+    ${pluggyBanner}
+    ${monthPills}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="display:flex;gap:6px">
+        ${[CUR_YEAR-1,CUR_YEAR,CUR_YEAR+1].map(y=>`<button class="tap pill" onclick="setState({selYear:${y}})" style="background:${state.selYear===y?"#1a1a2e":"#e8e7f0"};color:${state.selYear===y?"#fff":"#888"}">${y}</button>`).join("")}
+      </div>
+      <button class="tap btn-primary" onclick="openAddInvoice()">+ Lançar</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px">
+      ${["all","paid","pending","overdue"].map(s=>`<button class="tap pill" onclick="setState({filterSt:'${s}'})" style="background:${state.filterSt===s?"#1a1a2e":"#e8e7f0"};color:${state.filterSt===s?"#fff":"#888"}">${s==="all"?"Todas":STATUS[s].label}${s!=="all"?" ("+rows.filter(x=>x.status===s).length+")":""}</button>`).join("")}
+    </div>
+    ${isMobile ? invoiceCards : invoiceTable}
+    ${rows.filter(x=>x.status==="overdue").length>0?`<button class="tap" style="width:100%;margin-top:14px;padding:14px;border-radius:14px;background:#7f1d1d;color:#fff;font-size:13px;font-weight:800" onclick="notifyAllOverdue()">⚠️ Notificar Todos em Atraso (${rows.filter(x=>x.status==="overdue").length})</button>`:""}`;
+
+  const tabBanco = `
+    <h2 style="font-size:${isMobile?"18px":"22px"};font-weight:900;margin-bottom:4px">Open Finance</h2>
+    <p style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.7">Conecte sua conta via Pluggy para detectar pagamentos automaticamente.</p>
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="section"><div class="section-title">Como funciona</div>
+        ${[["1","Crie conta gratuita","pluggy.ai → Dashboard → Criar App"],["2","Cole as credenciais","Client ID e Secret em Configurações"],["3","Informe o Item ID","ID da conexão bancária"],["4","Sincronize","O app lê o extrato e detecta pagamentos"]].map(([n,t,d])=>`
+          <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+            <div style="width:26px;height:26px;border-radius:50%;background:#6c63ff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">${n}</div>
+            <div><div style="font-weight:700;font-size:13px">${t}</div><div style="font-size:11px;color:#888;margin-top:1px">${d}</div></div>
+          </div>`).join("")}
+      </div>
+      <div class="section"><div class="section-title">🔍 Identificação por valor único</div>
+        ${state.residents.map(r=>`<div style="display:flex;justify-content:space-between;background:#f8f8fc;border-radius:9px;padding:7px 12px;margin-bottom:6px;font-size:12px"><span style="font-weight:700">Casa ${esc(r.apt)}</span><span class="mono" style="color:#6c63ff;font-weight:700">${fmtBRL(r.amount)}</span></div>`).join("")}
+      </div>
+    </div>
+    ${state.connectStep===0?`<button class="tap" onclick="pluggyConnect()" style="width:100%;padding:15px;border-radius:14px;background:#6c63ff;color:#fff;font-size:14px;font-weight:800">🏦 Conectar via Pluggy</button>`:""}
+    ${state.connectStep===1?`<div style="text-align:center;padding:20px;color:#6c63ff;font-weight:700">⏳ Autenticando...</div>`:""}
+    ${state.connectStep>=2?`<div class="section"><div class="section-title">Selecionar Conta</div>
+      ${state.pluggyAccounts.length===0?`
+        <label class="field-label">Item ID da Pluggy</label>
+        <input class="field-input" value="${esc(state.settings.pluggyItemId)}" oninput="state.settings.pluggyItemId=this.value" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+        <button class="tap btn-primary" style="width:100%" onclick="pluggyLoadAccounts()">Buscar Contas</button>`:`
+        ${state.pluggyAccounts.map(a=>`
+          <div class="tap" onclick="setState({pluggySelAcct:'${a.id}'})" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid ${state.pluggySelAcct===a.id?"#6c63ff":"#f0eff4"};margin-bottom:8px;background:${state.pluggySelAcct===a.id?"#f5f3ff":"#fff"};cursor:pointer">
+            <span style="font-size:22px">🏦</span>
+            <div style="flex:1"><div style="font-weight:700;font-size:13px">${esc(a.name)}</div><div style="font-size:11px;color:#888">****${(a.number||"").slice(-4)||"——"}</div></div>
+            ${state.pluggySelAcct===a.id?`<span style="color:#6c63ff;font-weight:900;font-size:18px">✓</span>`:""}
+          </div>`).join("")}
+        <button class="tap" onclick="pluggySync()" ${!state.pluggySelAcct||state.pluggySyncing?"disabled":""} style="width:100%;padding:14px;border-radius:12px;background:${state.pluggySelAcct?"#6c63ff":"#e0e0e0"};color:${state.pluggySelAcct?"#fff":"#aaa"};font-size:14px;font-weight:800;margin-top:4px">${state.pluggySyncing?"⏳ Sincronizando...":"↻ Sincronizar Extrato"}</button>`}
+    </div>`:""}
+    ${state.connectStep===3?`<div>
+      <div style="background:#f0fdf4;border-radius:16px;padding:16px;border:1.5px solid #86efac;margin-bottom:12px">
+        <div style="font-weight:800;font-size:14px;color:#14532d;margin-bottom:4px">✅ Conectado</div>
+        <div style="font-size:12px;color:#166534">Última sync: ${state.pluggyLastSync} · ${state.pluggyMatches.length} pagamento(s)</div>
+      </div>
+      <button class="tap" onclick="pluggySync()" ${state.pluggySyncing?"disabled":""} style="width:100%;padding:14px;border-radius:14px;background:#6c63ff;color:#fff;font-size:14px;font-weight:800">${state.pluggySyncing?"⏳ Sincronizando...":"↻ Sincronizar Novamente"}</button>
+    </div>`:""}`;
+
+  const tabMoradores = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:${isMobile?"18px":"22px"};font-weight:900">Moradores</h2>
+      <button class="tap btn-primary" onclick="openEditRes(null)">+ Nova Casa</button>
+    </div>
+    <div class="grid-auto">
+      ${state.residents.map(r=>`
+        <div class="card tap" onclick="openEditRes(${r.id})" style="padding:18px 20px;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+            <div><div style="font-weight:800;font-size:16px">Casa ${esc(r.apt)}</div><div style="font-size:12px;color:#888;margin-top:2px">${esc(r.owner)||`<span style="color:#ddd">Sem nome</span>`}</div></div>
+            <div class="mono" style="font-weight:800;font-size:15px;color:#6c63ff">${fmtBRL(r.amount)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px;background:#f8f8fc;border-radius:9px;padding:7px 10px">
+              📧<span class="mono" style="font-size:11px;color:${r.email?"#333":"#ccc"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(r.email)||"Não cadastrado"}</span>
+              ${!r.email?`<span style="font-size:9px;background:#fef9c3;color:#854d0e;border-radius:4px;padding:2px 5px;font-weight:700;flex-shrink:0">!</span>`:""}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;background:#f8f8fc;border-radius:9px;padding:7px 10px">
+              📱<span class="mono" style="font-size:11px;color:${r.phone?"#333":"#ccc"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(r.phone)||"Não cadastrado"}</span>
+              ${!r.phone?`<span style="font-size:9px;background:#fef9c3;color:#854d0e;border-radius:4px;padding:2px 5px;font-weight:700;flex-shrink:0">!</span>`:""}
+            </div>
+          </div>
+        </div>`).join("")}
+    </div>`;
+
+  const tabAlertas = `
+    <h2 style="font-size:${isMobile?"18px":"22px"};font-weight:900;margin-bottom:16px">Notificações</h2>
+    <div class="grid-2" style="margin-bottom:24px">
+      <button class="tap" onclick="notifyAllOverdue()" style="padding:14px;border-radius:14px;background:#7f1d1d;color:#fff;font-size:13px;font-weight:800">⚠️ Cobranças de Atraso (${rows.filter(x=>x.status==="overdue").length})</button>
+      <button class="tap" onclick="notifyAllPending()" style="padding:14px;border-radius:14px;background:#1e40af;color:#fff;font-size:13px;font-weight:800">📧 Lembretes Pendentes (${rows.filter(x=>x.status==="pending"&&x.dueDate).length})</button>
+    </div>
+    <div style="font-weight:700;font-size:11px;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Log de Envios</div>
+    <div class="card" style="overflow:hidden">
+      ${state.notifLog.length===0?`<div style="padding:40px;text-align:center;color:#aaa;font-size:13px">Nenhum envio ainda.</div>`:""}
+      ${state.notifLog.map((l,i)=>`
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:${i<state.notifLog.length-1?"1px solid #f4f4f8":"none"}">
+          <div style="width:36px;height:36px;border-radius:10px;background:${l.ch==="Email"?"#eff6ff":"#f0fdf4"};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${l.ch==="Email"?"📧":"💬"}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px">${esc(l.res)}</div>
+            <div style="font-size:11px;color:${l.type==="overdue"?"#ef4444":"#eab308"};font-weight:600">${l.type==="overdue"?"Cobrança":"Lembrete"}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;font-weight:600">${esc(l.st)}</div>
+            <div class="mono" style="font-size:10px;color:#aaa">${l.ts.slice(0,5)}</div>
+          </div>
+        </div>`).join("")}
+    </div>`;
+
+  const s = state.settings;
+  const tabConfig = `
+    <h2 style="font-size:${isMobile?"18px":"22px"};font-weight:900;margin-bottom:20px">Configurações</h2>
+    <div class="grid-2">
+      <div class="section"><div class="section-title">🏦 Pluggy – Open Finance</div>
+        <label class="field-label">Client ID</label><input class="field-input" value="${esc(s.pluggyClientId)}" oninput="state.settings.pluggyClientId=this.value;saveSettings()" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+        <label class="field-label">Client Secret</label><input class="field-input" type="password" value="${esc(s.pluggyClientSecret)}" oninput="state.settings.pluggyClientSecret=this.value;saveSettings()" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+        <label class="field-label">Item ID</label><input class="field-input" value="${esc(s.pluggyItemId)}" oninput="state.settings.pluggyItemId=this.value;saveSettings()" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/>
+        <label class="field-label">Valor base (R$)</label><input class="field-input" type="number" value="${s.baseAmount}" oninput="state.settings.baseAmount=this.value;saveSettings()"/>
+        <div class="infobox">pluggy.ai → Dashboard → Novo App</div>
+      </div>
+      <div>
+        <div class="section"><div class="section-title">📧 Gmail OAuth 2.0</div>
+          <label class="field-label">Client ID do Google</label>
+          <input class="field-input" value="${esc(s.gmailClientId)}" oninput="state.settings.gmailClientId=this.value;saveSettings()" placeholder="xxxx.apps.googleusercontent.com"/>
+          <div class="infobox">console.cloud.google.com → APIs → Gmail API → Credenciais</div>
+        </div>
+        <div class="section"><div class="section-title">💬 WhatsApp Business API</div>
+          <label class="field-label">Token de Acesso</label><input class="field-input" type="password" value="${esc(s.whatsappToken)}" oninput="state.settings.whatsappToken=this.value;saveSettings()" placeholder="EAAxxxxx..."/>
+          <label class="field-label">Phone Number ID</label><input class="field-input" value="${esc(s.whatsappPhoneId)}" oninput="state.settings.whatsappPhoneId=this.value;saveSettings()" placeholder="1234567890"/>
+          <div class="infobox">developers.facebook.com → WhatsApp → API Setup</div>
+        </div>
+        <div class="section"><div class="section-title">⚙️ Geral</div>
+          <label class="field-label">Nome do Remetente</label><input class="field-input" value="${esc(s.senderName)}" oninput="state.settings.senderName=this.value;saveSettings()"/>
+          <label class="field-label">Reenviar atraso a cada (dias)</label><input class="field-input" type="number" value="${s.overdueIntervalDays}" oninput="state.settings.overdueIntervalDays=this.value;saveSettings()"/>
+        </div>
+      </div>
+      <div style="grid-column:1/-1"><div class="section"><div class="section-title">✉️ Templates</div>
+        <div style="font-size:11px;color:#888;margin-bottom:10px">Variáveis: <code style="background:#f0eff4;padding:2px 5px;border-radius:4px">{nome}</code> <code style="background:#f0eff4;padding:2px 5px;border-radius:4px">{valor}</code> <code style="background:#f0eff4;padding:2px 5px;border-radius:4px">{vencimento}</code> <code style="background:#f0eff4;padding:2px 5px;border-radius:4px">{remetente}</code></div>
+        <div class="grid-2">
+          ${[["emailReminderTpl","E-mail – Lembrete"],["emailOverdueTpl","E-mail – Atraso"],["waReminderTpl","WhatsApp – Lembrete"],["waOverdueTpl","WhatsApp – Atraso"]].map(([k,l])=>`
+            <div><label class="field-label">${l}</label>
+            <textarea class="field-input" rows="4" oninput="state.settings.${k}=this.value;saveSettings()" style="resize:vertical;font-family:'DM Mono',monospace;font-size:11px">${esc(s[k])}</textarea></div>`).join("")}
+
+```
+    </div>
+  </div></div>
+</div>
+<button class="tap btn-primary" onclick="showToast('Configurações salvas! ✓')">💾 Salvar</button>`;
+```
+
+const tabContents = [tabHome, tabBanco, tabMoradores, tabAlertas, tabConfig];
+const pad = isMobile ? “14px 14px 90px” : “28px 32px”;
+
+const sidebar = `<div class="sidebar desktop-only"> <div style="padding:28px 20px 24px"> <div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6c63ff;margin-bottom:6px">Gestão Condominial</div> <div style="font-size:22px;font-weight:900">Vila <span style="color:#a78bfa">Flora</span></div> <div class="mono" style="margin-top:10px;font-size:13px;color:#a78bfa;font-weight:700">${fmtBRL(grand)}</div> <div style="font-size:10px;color:#6b6b8a;margin-top:2px">total previsto · ${MONTHS_PT[state.selMonth]}</div> <div style="margin-top:8px;display:inline-flex;align-items:center;background:#22c55e18;border-radius:6px;padding:3px 8px"> <span style="font-size:9px;color:#22c55e;font-weight:700">☁️ Firebase sincronizado</span> </div> </div> <nav style="flex:1;padding:0 12px"> ${tabs.map((t,i)=>`
+<button onclick=“setState({tab:${i}})” style=“width:100%;padding:11px 14px;border-radius:12px;background:${state.tab===i?“rgba(108,99,255,0.18)”:“none”};display:flex;align-items:center;gap:12px;color:${state.tab===i?”#a78bfa”:”#6b6b8a”};margin-bottom:4px;cursor:pointer;position:relative;text-align:left”>
+<div style="opacity:${state.tab===i?1:0.6};display:flex">${icons[i]}</div>
+<span style="font-size:13px;font-weight:${state.tab===i?800:600}">${t}</span>
+${i===1&&state.connectStep!==3?`<div style="width:7px;height:7px;border-radius:50%;background:#f59e0b;margin-left:auto"></div>`:””}
+${state.tab===i?`<div style="position:absolute;left:0;top:20%;bottom:20%;width:3px;background:#6c63ff;border-radius:0 3px 3px 0"></div>`:””}
+</button>`).join(””)}
+</nav>
+<div style="padding:16px 20px;border-top:1px solid #2e2e46">
+<div style="font-size:10px;color:#6b6b8a">${new Date().toLocaleDateString(“pt-BR”,{weekday:“long”,day:“2-digit”,month:“long”})}</div>
+</div>
+
+  </div>`;
+
+const mobileHeader = `<div class="mobile-only" style="background:#1a1a2e;color:#fff;padding:44px 18px 14px">
+<div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#6c63ff;margin-bottom:2px">Gestão Condominial</div>
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div><span style="font-size:20px;font-weight:900">Vila </span><span style="font-size:20px;font-weight:900;color:#a78bfa">Flora</span></div>
+<div style="text-align:right">
+<div class="mono" style="font-weight:900;font-size:16px;color:#a78bfa">${fmtBRL(grand)}</div>
+<span style="font-size:9px;background:#22c55e22;color:#22c55e;border-radius:5px;padding:1px 6px;font-weight:700">☁️ Sincronizado</span>
+</div>
+</div>
+
+  </div>`;
+
+const bottomNav = `<div class="mobile-only" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)"> ${tabs.map((t,i)=>`
+<button class=“nav-btn tap ${state.tab===i?“active”:””}” onclick=“setState({tab:${i}})”>
+${icons[i]}
+<span style="font-size:9px;font-weight:700">${t}</span>
+${state.tab===i?`<div style="width:4px;height:4px;border-radius:50%;background:#6c63ff"></div>`:””}
+${i===1&&state.connectStep!==3?`<div style="position:absolute;top:8px;right:calc(50% - 12px);width:7px;height:7px;border-radius:50%;background:#f59e0b;border:2px solid #fff"></div>`:””}
+</button>`).join(””)}
+
+  </div>`;
+
+// Modals
+const dr = state.detailRow;
+const detailModal = dr ? ` <div class="overlay"> <div class="overlay-bg" onclick="setState({detailRow:null})"></div> ${isMobile?`<div class="sheet-box"><div class="sheet-handle"></div><div style="font-size:17px;font-weight:900;margin-bottom:18px">Casa ${esc(dr.r.apt)}${dr.r.owner?” – “+esc(dr.r.owner):””}</div>${detailContent(dr)}</div>`: `<div class="modal-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:18px;font-weight:900">Casa ${esc(dr.r.apt)}${dr.r.owner?” – “+esc(dr.r.owner):””}</div><button onclick="setState({detailRow:null})" style="width:30px;height:30px;border-radius:50%;background:#f0eff4;font-size:16px;color:#888">✕</button></div>${detailContent(dr)}</div>`} </div>` : “”;
+
+const er = state.editRes;
+const editModal = er!==null ? ` <div class="overlay"> <div class="overlay-bg" onclick="setState({editRes:null})"></div> ${isMobile?`<div class="sheet-box"><div class="sheet-handle"></div><div style="font-size:17px;font-weight:900;margin-bottom:18px">${er.id?“Editar Casa”:“Nova Casa”}</div>${editResContent(er)}</div>`: `<div class="modal-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:18px;font-weight:900">${er.id?“Editar Casa”:“Nova Casa”}</div><button onclick="setState({editRes:null})" style="width:30px;height:30px;border-radius:50%;background:#f0eff4;font-size:16px;color:#888">✕</button></div>${editResContent(er)}</div>`} </div>` : “”;
+
+const addInvModal = state.modal===“addInvoice” ? ` <div class="overlay"> <div class="overlay-bg" onclick="setState({modal:null})"></div> ${isMobile?`<div class="sheet-box"><div class="sheet-handle"></div><div style="font-size:17px;font-weight:900;margin-bottom:18px">Lançar Cobrança</div>${addInvContent()}</div>`: `<div class="modal-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><div style="font-size:18px;font-weight:900">Lançar Cobrança</div><button onclick="setState({modal:null})" style="width:30px;height:30px;border-radius:50%;background:#f0eff4;font-size:16px;color:#888">✕</button></div>${addInvContent()}</div>`} </div>` : “”;
+
+document.getElementById(“app”).innerHTML = isMobile ? `${mobileHeader} <div style="padding:${pad}">${tabContents[state.tab]}</div> ${bottomNav} ${detailModal}${editModal}${addInvModal}` : `<div style="display:flex;min-height:100vh"> ${sidebar} <div class="main-area"> <div class="topbar"> <div style="font-size:18px;font-weight:900;color:#1a1a2e">${tabs[state.tab]}</div> <span style="font-size:12px;background:#f0fdf4;color:#22c55e;border-radius:8px;padding:4px 10px;font-weight:700">☁️ Firebase sincronizado</span> </div> <div style="flex:1;overflow-y:auto;padding:${pad}">${tabContents[state.tab]}</div> </div> </div> ${detailModal}${editModal}${addInvModal}`;
+}
+
+function detailContent(dr) {
+const sc = STATUS[dr.status];
+return ` <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"> <div> <div class="mono" style="font-size:28px;font-weight:900">${fmtBRL(dr.amount)}</div> <div style="font-size:12px;color:#888;margin-top:2px">Vencimento: ${fmtDate(dr.dueDate)}</div> ${dr.inv&&dr.inv.txId?`<div style="font-size:11px;color:#22c55e;margin-top:2px;font-weight:700">🏦 Detectado via Open Finance · ${fmtDate(dr.inv.paidAt)}</div>`:""} </div> <span class="badge ${sc.cls}" style="font-size:13px;padding:6px 14px">${sc.label}</span> </div> <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Alterar Status</div> <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px"> ${["paid","pending","overdue"].map(s=>`<button class=“tap” onclick=“changeStatusUI(’${dr.key}’,${dr.r.id},’${s}’);setState({detailRow:{…state.detailRow,status:’${s}’}})” style=“padding:12px 6px;border-radius:14px;background:${dr.status===s?STATUS[s].dot:”#f0eff4”};color:${dr.status===s?”#fff”:”#666”};font-size:12px;font-weight:800”>${STATUS[s].label}</button>`).join("")} </div> <div style="font-size:11px;font-weight:700;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">Notificar</div> <div style="display:flex;flex-direction:column;gap:10px"> <button class="tap" onclick="notifyUI(${dr.r.id},'reminder');setState({detailRow:null})" ${dr.status==="paid"?"disabled":""} style="padding:13px;border-radius:14px;background:${dr.status==="paid"?"#f0eff4":"#eff6ff"};color:${dr.status==="paid"?"#ccc":"#1d4ed8"};font-size:13px;font-weight:800;opacity:${dr.status==="paid"?0.5:1}">📧 Enviar Lembrete</button> <button class="tap" onclick="notifyUI(${dr.r.id},'overdue');setState({detailRow:null})" ${dr.status!=="overdue"?"disabled":""} style="padding:13px;border-radius:14px;background:${dr.status!=="overdue"?"#f0eff4":"#fef2f2"};color:${dr.status!=="overdue"?"#ccc":"#991b1b"};font-size:13px;font-weight:800;opacity:${dr.status!=="overdue"?0.5:1}">⚠️ Enviar Cobrança de Atraso</button> </div>`;
+}
+
+function editResContent(er) {
+return ` <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"> <div><label class="field-label">Número da Casa</label><input class="field-input" id="er-apt" value="${esc(er.apt)}" placeholder="11"/></div> <div><label class="field-label">Família / Morador</label><input class="field-input" id="er-owner" value="${esc(er.owner)}" placeholder="Silva"/></div> </div> <label class="field-label">E-mail</label><input class="field-input" id="er-email" type="email" value="${esc(er.email)}" placeholder="morador@email.com"/> <label class="field-label">Telefone WhatsApp (DDI+DDD+nº)</label><input class="field-input" id="er-phone" value="${esc(er.phone)}" placeholder="5511999998888"/> <label class="field-label">Valor único (R$)</label><input class="field-input" id="er-amount" type="number" value="${er.amount}" placeholder="300.11"/> <div style="font-size:11px;color:#888;background:#fefce8;border-radius:10px;padding:8px 12px;margin-bottom:8px">💡 Valor único por casa para identificação automática (ex: 300,01 / 300,02…)</div> <button class="tap" style="width:100%;padding:14px;border-radius:14px;background:#6c63ff;color:#fff;font-size:14px;font-weight:800;margin-top:4px" onclick="saveResident()">Salvar</button> ${er.id?`<button class="tap" style="width:100%;padding:12px;border-radius:14px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:700;margin-top:8px" onclick="removeResident(${er.id})">🗑️ Remover Casa</button>`:""}`;
+}
+
+function addInvContent() {
+return ` <label class="field-label">Casa</label> <select class="field-input" id="ai-res"> <option value="">Selecione...</option> ${state.residents.map(r=>`<option value="${r.id}">Casa ${esc(r.apt)}${r.owner?” – “+esc(r.owner):””}</option>`).join("")} </select> <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"> <div><label class="field-label">Mês</label><select class="field-input" id="ai-month">${MONTHS_S.map((m,i)=>`<option value=”${i}” ${i===state.selMonth?“selected”:””}>${m}</option>`).join("")}</select></div> <div><label class="field-label">Ano</label><select class="field-input" id="ai-year">${[CUR_YEAR-1,CUR_YEAR,CUR_YEAR+1].map(y=>`<option value=”${y}” ${y===state.selYear?“selected”:””}>${y}</option>`).join("")}</select></div> </div> <label class="field-label">Valor (R$)</label><input class="field-input" id="ai-amount" type="number" placeholder="0"/> <label class="field-label">Data de Vencimento</label><input class="field-input" id="ai-due" type="date"/> <label class="field-label">Status</label> <select class="field-input" id="ai-status"><option value="pending">Pendente</option><option value="paid">Pago</option><option value="overdue">Atrasado</option></select> <label class="field-label">Observações</label><input class="field-input" id="ai-notes" placeholder="Opcional"/> <button class="tap" style="width:100%;padding:14px;border-radius:14px;background:#6c63ff;color:#fff;font-size:14px;font-weight:800;margin-top:4px" onclick="saveInvoice()">Salvar</button>`;
+}
+
+// ─── Global action functions ──────────────────────────────────────────────────
+window.setState       = setState;
+window.showToast      = showToast;
+window.pluggyConnect  = pluggyConnect;
+window.pluggySync     = pluggySync;
+
+window.saveSettings = () => saveToFirebase(“settings”, state.settings);
+
+window.changeStatusUI = (key, rid, st) => {
+const r = state.residents.find(x=>x.id===rid); if(r) changeStatus(key,r,st);
+};
+
+window.openDetail = rid => {
+const row = getRows().find(x=>x.r.id===rid);
+if (row) setState({detailRow:row});
+};
+
+window.openEditRes = rid => {
+if (rid) { const r=state.residents.find(x=>x.id===rid); if(r) setState({editRes:{…r}}); }
+else setState({editRes:{id:null,apt:””,owner:””,email:””,phone:””,amount:””}});
+};
+
+window.saveResident = () => {
+const apt = document.getElementById(“er-apt”).value.trim();
+if (!apt) { showToast(“Informe o número da casa.”,“err”); return; }
+const er = state.editRes;
+const data = {id:er.id||Date.now(), apt, owner:document.getElementById(“er-owner”).value, email:document.getElementById(“er-email”).value, phone:document.getElementById(“er-phone”).value, amount:parseFloat(document.getElementById(“er-amount”).value)||er.amount||0};
+const residents = er.id ? state.residents.map(r=>r.id===er.id?data:r) : […state.residents,data];
+setState({residents, editRes:null});
+showToast(“Casa salva! ☁️”);
+};
+
+window.removeResident = rid => {
+if (!confirm(“Remover esta casa?”)) return;
+setState({residents:state.residents.filter(r=>r.id!==rid), editRes:null});
+};
+
+window.openAddInvoice = () => setState({modal:“addInvoice”});
+
+window.saveInvoice = () => {
+const rid = document.getElementById(“ai-res”).value;
+if (!rid) { showToast(“Selecione uma casa.”,“err”); return; }
+const r = state.residents.find(x=>x.id===parseInt(rid));
+const month=parseInt(document.getElementById(“ai-month”).value), year=parseInt(document.getElementById(“ai-year”).value);
+const key = invKey(rid,month,year);
+setState({invoices:{…state.invoices,[key]:{residentId:parseInt(rid),month,year,amount:parseFloat(document.getElementById(“ai-amount”).value)||r.amount,dueDate:document.getElementById(“ai-due”).value,status:document.getElementById(“ai-status”).value,notes:document.getElementById(“ai-notes”).value}},modal:null});
+showToast(“Lançamento salvo! ☁️”);
+};
+
+window.notifyUI = async (rid,type) => {
+const row = getRows().find(x=>x.r.id===rid);
+if (row) await notify(row,type);
+};
+
+window.notifyAllOverdue  = async () => { for(const row of getRows().filter(x=>x.status===“overdue”)) await notify(row,“overdue”); };
+window.notifyAllPending  = () => getRows().filter(x=>x.status===“pending”&&x.dueDate).forEach(row=>notify(row,“reminder”));
+
+window.pluggyLoadAccounts = async () => {
+try {
+const ar = await fetch(PLUGGY_API+”/accounts?itemId=”+state.settings.pluggyItemId,{headers:{“X-API-KEY”:state.pluggyApiKey}});
+setState({pluggyAccounts:(await ar.json()).results});
+} catch(e) { showToast(e.message,“err”); }
+};
+
+window.addEventListener(“resize”, render);
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+loadFromFirebase();
+</script>
+
+</body>
+</html>

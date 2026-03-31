@@ -74,17 +74,18 @@ tr:hover td{background:#f5f3ff;cursor:pointer;}
   <div style="font-size:32px;font-weight:900;color:#a78bfa;margin-bottom:4px">Vila Flora</div>
   <div style="font-size:11px;color:#6b6b8a;letter-spacing:3px;text-transform:uppercase;margin-bottom:32px">Gestão Condominial</div>
   <div class="spinner"></div>
-  <div id="loading-msg" style="font-size:12px;color:#6b6b8a;margin-top:16px">Iniciando ao Firebase...</div>
+  <div id="loading-msg" style="font-size:12px;color:#6b6b8a;margin-top:16px">Conectando ao Firebase...</div>
 </div>
 
 <div id="app" style="display:none;min-height:100vh;"></div>
 
-<!-- Firebase SDK -->
+<!-- Firebase SDK compat (works in all browsers) -->
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyBYx8emBtMkF_Tz3JiqV6dbF1MGgRPcA_o",
   authDomain: "vilaflora-5d6f0.firebaseapp.com",
@@ -94,8 +95,8 @@ const firebaseConfig = {
   appId: "1:962899013984:web:4009a9407efe3e77726e05",
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -143,14 +144,17 @@ const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replac
 
 // ─── Firebase helpers ─────────────────────────────────────────────────────────
 async function fbGet(docPath) {
-  const snap = await getDoc(doc(db, ...docPath.split("/")));
-  return snap.exists() ? snap.data() : null;
+  const parts = docPath.split("/");
+  const snap = await db.collection(parts[0]).doc(parts[1]).get();
+  return snap.exists ? snap.data() : null;
 }
 async function fbSet(docPath, data) {
-  await setDoc(doc(db, ...docPath.split("/")), data, {merge:true});
+  const parts = docPath.split("/");
+  await db.collection(parts[0]).doc(parts[1]).set(data, {merge:true});
 }
 function fbListen(docPath, cb) {
-  return onSnapshot(doc(db, ...docPath.split("/")), snap => cb(snap.exists() ? snap.data() : null));
+  const parts = docPath.split("/");
+  return db.collection(parts[0]).doc(parts[1]).onSnapshot(snap => cb(snap.exists ? snap.data() : null));
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────

@@ -189,7 +189,7 @@ return ‘<tr onclick="openDetail('+row.r.id+')">’+
 ‘<td style="font-weight:800">Casa ‘+esc(row.r.apt)+’</td>’+
 ‘<td style="color:#555">’+esc(row.r.owner||”—”)+’</td>’+
 ‘<td class="mono" style="font-weight:600">’+fmt(row.amt)+’</td>’+
-‘<td style=“color:’+(od&&od>0?”#ef4444”:”#888”)+’”>’+fdate(row.due)+(od&&od>0?’<div style="font-size:10px;color:#ef4444">’+od+‘d</div>’:””)+
+‘<td style=“color:’+(od&&od>0?”#ef4444”:”#888”)+’”>’+fdate(row.due)+(od&&od>0?’<div style="font-size:10px;color:#ef4444">’+od+‘d</div>’:””)+”</td>”+
 ‘<td onclick="event.stopPropagation()"><span class="badge" style="background:'+sc.bg+';color:'+sc.tx+'">’+sc.lb+’</span></td>’+
 ‘<td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">’+
 [“paid”,“pending”,“overdue”].map(function(s){

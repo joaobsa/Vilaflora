@@ -486,7 +486,11 @@ var targets=type===“overdue”?rows.filter(function(x){return x.st===“overdu
 targets.forEach(function(row){notifyRow(row.r.id,type===“overdue”?“overdue”:“reminder”);});
 };
 window.addEventListener(“resize”,render);
+try {
 render();
+} catch(e) {
+document.getElementById(“root”).innerHTML = ‘<div style="padding:30px;font-family:monospace;background:#fee2e2;color:#7f1d1d;border-radius:12px;margin:20px;font-size:13px"><strong>Erro:</strong> ‘+e.message+’<br/><br/>’+e.stack+’</div>’;
+}
 </script>
 
 </body>

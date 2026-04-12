@@ -293,7 +293,7 @@ return ‘<div style=“padding:’+(mob?“14px 14px 90px”:“28px 28px”)+�
 ‘<div style="font-size:11px;color:#888;background:#f8f8fc;border-radius:9px;padding:8px 12px;margin-bottom:12px">console.cloud.google.com → APIs → Gmail API → Credenciais OAuth 2.0</div>’+
 ‘</div>’+
 ‘<div class="sec"><div class="sec-t">💬 WhatsApp Business API</div>’+
-‘<label class="lbl">Token de Acesso</label><input class="inp" type="password" id="wt" value="'+esc(ss.whatsappToken)+'" placeholder="EAAxxxxx..."/>’+
+‘<label class="lbl">Token de Acesso</label><input class="inp" type="password" id="wt" value="'+esc(ss.whatsappToken)+'" placeholder="EAAxxxxx. . ."/>’+
 ‘<label class="lbl">Phone Number ID</label><input class="inp" id="wp" value="'+esc(ss.whatsappPhoneId)+'" placeholder="1234567890"/>’+
 ‘<div style="font-size:11px;color:#888;background:#f8f8fc;border-radius:9px;padding:8px 12px;margin-bottom:12px">developers.facebook.com → WhatsApp → API Setup</div>’+
 ‘</div>’+
@@ -408,14 +408,14 @@ return ‘<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">’+
 ‘<label class="lbl">E-mail</label><input class="inp" id="er-eml" type="email" value="'+esc(er.email)+'" placeholder="morador@email.com"/>’+
 ‘<label class="lbl">Telefone WhatsApp (DDI+DDD+nº)</label><input class="inp" id="er-phn" value="'+esc(er.phone)+'" placeholder="5511999998888"/>’+
 ‘<label class="lbl">Valor único (R$)</label><input class="inp" id="er-amt" type="number" value="'+er.amount+'" placeholder="300.11"/>’+
-‘<div style="font-size:11px;color:#888;background:#fefce8;border-radius:9px;padding:7px 11px;margin-bottom:8px">💡 Valor único por casa (ex: 300,01 / 300,02…)</div>’+
+‘<div style="font-size:11px;color:#888;background:#fefce8;border-radius:9px;padding:7px 11px;margin-bottom:8px">💡 Valor único por casa (ex: 300,01 / 300,02. . .)</div>’+
 ‘<button class="tap" onclick="saveResident()" style="width:100%;padding:13px;border-radius:13px;background:#6c63ff;color:#fff;font-size:14px;font-weight:800;border:none;margin-top:4px">Salvar</button>’+
 (er.id?’<button class="tap" onclick="removeResident('+er.id+')" style="width:100%;padding:11px;border-radius:13px;background:#fef2f2;color:#991b1b;font-size:13px;font-weight:700;border:none;margin-top:8px">🗑️ Remover Casa</button>’:””);
 }
 
 function addInvContent(){
 return ‘<label class="lbl">Casa</label>’+
-‘<select class="inp" id="ai-res"><option value="">Selecione…</option>’+
+‘<select class="inp" id="ai-res"><option value="">Selecione. . .</option>’+
 S.residents.map(function(r){return ‘<option value="'+r.id+'">Casa ‘+esc(r.apt)+(r.owner?” – “+esc(r.owner):””)+’</option>’;}).join(””)+
 ‘</select>’+
 ‘<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">’+
@@ -474,9 +474,9 @@ if(!row)return;
 var vars={nome:row.r.owner,valor:fmt(row.amt),vencimento:fdate(row.due),remetente:S.settings.senderName};
 var isOverdue=type===“overdue”;
 var log={id:Date.now(),ts:new Date().toLocaleString(“pt-BR”),res:“Casa “+row.r.apt,type:type};
-if(S.settings.gmailClientId&&row.r.email){log.ch=“Email”;log.st=“⏳ Enviando…”;}
+if(S.settings.gmailClientId&&row.r.email){log.ch=“Email”;log.st=“⏳ Enviando. . .”;}
 else{log.ch=“Email”;log.st=row.r.email?“⚠️ Sem Client ID”:“⚠️ Sem e-mail”;}
-S.notifLog=[log,…S.notifLog].slice(0,200);
+S.notifLog=[log,. . .S.notifLog].slice(0,200);
 save(); render();
 toast(“Notificação registrada para Casa “+row.r.apt+”!”);
 };

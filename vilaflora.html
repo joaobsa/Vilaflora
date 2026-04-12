@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Vila Flora – Gestão Condominial</title>
+<meta name="theme-color" content="#0f172a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root {
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --dark: #0f172a;
+  --accent: #7c3aed;
+  --accent2: #a78bfa;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --muted: #94a3b8;
+  --border: #e2e8f0;
+  --radius: 16px;
+  --shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--dark); font-size: 15px; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: inherit; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Layout */
+.app-shell { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: var(--dark); color: #fff; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; transition: transform 0.3s; }
+.main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.page { flex: 1; overflow-y: auto; padding: 28px; }
+.bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 100; padding-bottom: env(safe-area-inset-bottom, 0); }
+
+/* Sidebar */
+.sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+.sidebar-nav button { width: 100%; padding: 10px 14px; border-radius: 12px; display: flex; align-items: center; gap: 12px; color: #94a3b8; font-size: 14px; font-weight: 500; margin-bottom: 2px; transition: all 0.15s; text-align: left; }
+.sidebar-nav button:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.sidebar-nav button.active { background: rgba(124,58,237,0.2); color: var(--accent2); font-weight: 600; }
+.sidebar-nav button.active svg { color: var(--accent2); }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #475569; }
+
+/* Cards */
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card-pad { padding: 20px 22px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fill,minmax(280px,1fr)); gap: 14px; }
+
+/* Stat cards */
+.stat-card { padding: 18px 20px; border-radius: var(--radius); }
+.stat-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; opacity: 0.7; }
+.stat-value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; }
+.stat-sub { font-size: 12px; margin-top: 4px; opacity: 0.6; }
+
+/* Table */
+.table-wrap { border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+thead tr { background: var(--dark); }
+th { padding: 12px 16px; text-align: left; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent2); font-weight: 600; white-space: nowrap; }
+td { padding: 13px 16px; border-top: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+tbody tr:hover td { background: #f8f7ff; cursor: pointer; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 4px 12px; font-size: 11px; font-weight: 700; }
+.badge-paid { background: #d1fae5; color: #065f46; }
+.badge-pending { background: #fef9c3; color: #78350f; }
+.badge-overdue { background: #fee2e2; color: #7f1d1d; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #6d28d9; }
+.btn-danger { background: #7f1d1d; color: #fff; }
+.btn-danger:hover { background: #991b1b; }
+.btn-outline { background: transparent; color: var(--dark); border: 1.5px solid var(--border); }
+.btn-outline:hover { background: var(--bg); }
+.btn-ghost { background: transparent; color: var(--muted); }
+.btn-ghost:hover { color: var(--dark); background: var(--bg); }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.form-input { width: 100%; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg); font-size: 14px; color: var(--dark); transition: border-color 0.15s; }
+.form-input:focus { border-color: var(--accent); background: #fff; }
+textarea.form-input { resize: vertical; min-height: 90px; }
+.info-box { background: #f8f7ff; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #6d28d9; line-height: 1.6; margin-top: 6px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-box { background: var(--surface); border-radius: 20px; padding: 28px; width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; box-shadow: 0 25px 80px rgba(0,0,0,0.25); }
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+.sheet-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 300; display: flex; flex-direction: column; justify-content: flex-end; }
+.sheet-box { background: var(--surface); border-radius: 22px 22px 0 0; padding: 0 22px 36px; max-height: 88vh; overflow-y: auto; }
+.sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 999px; margin: 14px auto 18px; }
+.sheet-title { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+
+/* Progress */
+.progress-track { height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; display: flex; }
+.progress-paid { background: var(--green); transition: width 0.5s; }
+.progress-pending { background: var(--yellow); transition: width 0.5s; }
+.progress-overdue { background: var(--red); transition: width 0.5s; }
+
+/* Pill filters */
+.pills { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+.pill { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; border: 1.5px solid transparent; }
+.pill-on { background: var(--dark); color: #fff; }
+.pill-off { background: var(--surface); color: var(--muted); border-color: var(--border); }
+.pill-off:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Toast */
+#toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 999; padding: 12px 22px; border-radius: 12px; font-size: 13px; font-weight: 600; display: none; white-space: nowrap; max-width: 90vw; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+
+/* Status dot */
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* Mobile card */
+.res-card { padding: 14px 16px; display: flex; align-items: center; gap: 13px; margin-bottom: 10px; cursor: pointer; }
+.res-avatar { width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 17px; font-weight: 900; }
+
+/* Section title */
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+/* Sync indicator */
+.sync-badge { display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #065f46; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; }
+.sync-badge.offline { background: #fef9c3; color: #78350f; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 32px; height: 32px; border: 3px solid rgba(124,58,237,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .main { margin-left: 0; }
+  .topbar { display: none; }
+  .page { padding: 14px 14px 90px; }
+  .bottom-nav { display: flex; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-auto { grid-template-columns: 1fr; }
+  .desk-only { display: none !important; }
+  .stat-value { font-size: 16px; }
+}
+@media (min-width: 769px) {
+  .mob-only { display: none !important; }
+  .modal-overlay, .sheet-overlay { align-items: center; justify-content: center; }
+  .sheet-box { border-radius: 20px; max-width: 500px; width: 100%; margin: auto; padding: 28px; }
+  .sheet-handle { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- Loading -->
+<div id="loading" style="position:fixed;inset:0;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999">
+  <div style="font-size:28px;font-weight:900;color:#a78bfa;margin-bottom:6px;font-family:'Outfit',sans-serif">Vila Flora</div>
+  <div style="font-size:11px;color:#475569;letter-spacing:3px;text-transform:uppercase;margin-bottom:32px">Gestão Condominial</div>
+  <div class="spinner"></div>
+</div>
+
+<div id="app" style="display:none"></div>
+
+<script>
+// ─── Firebase config ───────────────────────────────────────────────────────────
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBYx8emBtMkF_Tz3JiqV6dbF1MGgRPcA_o",
+  authDomain: "vilaflora-5d6f0.firebaseapp.com",
+  projectId: "vilaflora-5d6f0",
+  storageBucket: "vilaflora-5d6f0.firebasestorage.app",
+  messagingSenderId: "962899013984",
+  appId: "1:962899013984:web:4009a9407efe3e77726e05"
+};
+
+// ─── Constants ─────────────────────────────────────────────────────────────────
+var MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+var MONTHS_S = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+var CY = new Date().getFullYear();
+var YEARS = [CY-1, CY, CY+1];
+var PLUGGY = "https://api.pluggy.ai";
+
+var STATUS = {
+  paid:    { bg:"#d1fae5", tx:"#065f46", dot:"#10b981", lb:"Pago",     ic:"✓", cls:"badge-paid" },
+  pending: { bg:"#fef9c3", tx:"#78350f", dot:"#f59e0b", lb:"Pendente", ic:"⏳", cls:"badge-pending" },
+  overdue: { bg:"#fee2e2", tx:"#7f1d1d", dot:"#ef4444", lb:"Atrasado", ic:"!",  cls:"badge-overdue" }
+};
+
+var INIT_RESIDENTS = [
+  {id:1,  apt:"1",  owner:"", email:"", phone:"", amount:300.01},
+  {id:2,  apt:"2",  owner:"", email:"", phone:"", amount:300.02},
+  {id:3,  apt:"3",  owner:"", email:"", phone:"", amount:300.03},
+  {id:4,  apt:"4",  owner:"", email:"", phone:"", amount:300.04},
+  {id:5,  apt:"5",  owner:"", email:"", phone:"", amount:300.05},
+  {id:6,  apt:"6",  owner:"", email:"", phone:"", amount:300.06},
+  {id:7,  apt:"7",  owner:"", email:"", phone:"", amount:300.07},
+  {id:8,  apt:"8",  owner:"", email:"", phone:"", amount:300.08},
+  {id:9,  apt:"9",  owner:"", email:"", phone:"", amount:300.09},
+  {id:10, apt:"10", owner:"", email:"", phone:"", amount:300.10}
+];
+
+var DEF_SETTINGS = {
+  senderName: "Administração Vila Flora",
+  baseAmount: 300,
+  gmailClientId: "",
+  whatsappToken: "",
+  whatsappPhoneId: "",
+  pluggyClientId: "",
+  pluggyClientSecret: "",
+  pluggyItemId: "",
+  emailReminderTpl: "Olá {nome},\n\nLembrete: sua taxa condominial de {valor} vence em {vencimento}.\n\nAtenciosamente,\n{remetente}",
+  emailOverdueTpl:  "Olá {nome},\n\nSua taxa de {valor} está em ATRASO desde {vencimento}.\n\nPor favor regularize.\n\nAtenciosamente,\n{remetente}",
+  waReminderTpl:    "Olá {nome}! 👋\n\nLembrete: taxa de *{valor}* vence em *{vencimento}*.\n\n_{remetente}_",
+  waOverdueTpl:     "Olá {nome}! ⚠️\n\nSua taxa de *{valor}* está em *ATRASO* desde *{vencimento}*.\n\n_{remetente}_"
+};
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+function fmtBRL(n) { return "R$ " + Number(n).toLocaleString("pt-BR", {minimumFractionDigits:2}); }
+function ikey(rid,m,y) { return rid+"-"+m+"-"+y; }
+function today() { return new Date().toISOString().slice(0,10); }
+function ddiff(d) { return d ? Math.floor((new Date(today()) - new Date(d)) / 86400000) : null; }
+function fdate(d) { return d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR") : "—"; }
+function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function fill(tpl,vars) { return Object.entries(vars).reduce(function(t,kv){ return t.split("{"+kv[0]+"}").join(kv[1]); }, tpl); }
+function svgIcon(d, size) {
+  size = size || 20;
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="'+size+'" height="'+size+'">'+d+'</svg>';
+}
+
+var ICONS = {
+  home:     '<path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/>',
+  people:   '<circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87"/>',
+  bell:     '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
+  bank:     '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/><path d="M2 11h20"/>',
+  x:        '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  check:    '<polyline points="20 6 9 17 4 12"/>'
+};
+
+// ─── State ─────────────────────────────────────────────────────────────────────
+var S = {
+  tab: 0,
+  residents: JSON.parse(JSON.stringify(INIT_RESIDENTS)),
+  invoices: {},
+  settings: JSON.parse(JSON.stringify(DEF_SETTINGS)),
+  notifLog: [],
+  selMonth: new Date().getMonth(),
+  selYear: CY,
+  filter: "all",
+  modal: null,
+  editRes: null,
+  detailRow: null,
+  firebaseReady: false,
+  pluggyApiKey: "",
+  pluggyAccounts: [],
+  pluggySelAcct: "",
+  pluggySyncing: false,
+  pluggyLastSync: null,
+  pluggyMatches: [],
+  pluggyStep: 0
+};
+
+// ─── Firebase ──────────────────────────────────────────────────────────────────
+var db = null;
+var fbListeners = [];
+
+function fbInit() {
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    return true;
+  } catch(e) {
+    console.warn("Firebase init failed:", e);
+    return false;
+  }
+}
+
+function fbSave(key, data) {
+  if (!db) return;
+  db.collection("vilaflora").doc(key).set({ data: JSON.stringify(data) }).catch(function(e) {
+    console.warn("Firebase save error:", e);
+  });
+}
+
+var _saveTimers = {};
+function fbSaveDebounced(key, data) {
+  clearTimeout(_saveTimers[key]);
+  _saveTimers[key] = setTimeout(function() { fbSave(key, data); }, 600);
+}
+
+function fbListen(key, cb) {
+  if (!db) return;
+  var unsub = db.collection("vilaflora").doc(key).onSnapshot(function(snap) {
+    if (snap.exists) {
+      try { cb(JSON.parse(snap.data().data)); } catch(e) {}
+    }
+  }, function(e) { console.warn("Listener error:", e); });
+  fbListeners.push(unsub);
+}
+
+async function fbLoadAll() {
+  if (!db) return;
+  try {
+    var keys = ["residents", "invoices", "settings", "notifLog"];
+    var snaps = await Promise.all(keys.map(function(k) {
+      return db.collection("vilaflora").doc(k).get();
+    }));
+    if (snaps[0].exists) S.residents = JSON.parse(snaps[0].data().data);
+    if (snaps[1].exists) S.invoices  = JSON.parse(snaps[1].data().data);
+    if (snaps[2].exists) S.settings  = Object.assign({}, DEF_SETTINGS, JSON.parse(snaps[2].data().data));
+    if (snaps[3].exists) S.notifLog  = JSON.parse(snaps[3].data().data);
+    else fbSave("residents", S.residents); // First time - save defaults
+  } catch(e) { console.warn("Firebase load error:", e); }
+}
+
+function startListeners() {
+  fbListen("residents", function(d) { S.residents = d; render(); });
+  fbListen("invoices",  function(d) { S.invoices  = d; render(); });
+  fbListen("settings",  function(d) { S.settings  = Object.assign({}, DEF_SETTINGS, d); render(); });
+  fbListen("notifLog",  function(d) { S.notifLog  = d; render(); });
+}
+
+function setState(patch) {
+  Object.assign(S, patch);
+  if (patch.residents !== undefined) fbSaveDebounced("residents", S.residents);
+  if (patch.invoices  !== undefined) fbSaveDebounced("invoices",  S.invoices);
+  if (patch.settings  !== undefined) fbSaveDebounced("settings",  S.settings);
+  if (patch.notifLog  !== undefined) fbSaveDebounced("notifLog",  S.notifLog);
+  render();
+}
+
+// ─── Business logic ────────────────────────────────────────────────────────────
+function getRows() {
+  return S.residents.map(function(r) {
+    var k = ikey(r.id, S.selMonth, S.selYear);
+    var inv = S.invoices[k];
+    return { r:r, k:k, inv:inv, st:inv?inv.status:"pending", amt:inv?inv.amount:r.amount, due:inv?inv.dueDate:"", notes:inv?inv.notes:"" };
+  });
+}
+
+function autoOverdue() {
+  var changed = false;
+  var inv = Object.assign({}, S.invoices);
+  Object.keys(inv).forEach(function(k) {
+    var i = inv[k];
+    if (i.status === "pending" && i.dueDate && ddiff(i.dueDate) > 0) {
+      inv[k] = Object.assign({}, i, {status:"overdue"});
+      changed = true;
+    }
+  });
+  if (changed) { S.invoices = inv; fbSaveDebounced("invoices", inv); }
+}
+
+function changeStatus(k, r, st) {
+  var inv = Object.assign({}, S.invoices);
+  inv[k] = Object.assign({}, inv[k] || {residentId:r.id,month:S.selMonth,year:S.selYear,amount:r.amount,dueDate:"",notes:""}, {status:st});
+  setState({invoices: inv});
+}
+
+function addLog(ch, res, type, st) {
+  var log = [{id:Date.now(), ts:new Date().toLocaleString("pt-BR"), ch:ch, res:res, type:type, st:st}].concat(S.notifLog).slice(0,200);
+  setState({notifLog: log});
+}
+
+// ─── Gmail ─────────────────────────────────────────────────────────────────────
+var gapiLoaded = false;
+async function gmailSend(to, subject, body) {
+  if (!gapiLoaded) {
+    await new Promise(function(res, rej) {
+      var s = document.createElement("script");
+      s.src = "https://apis.google.com/js/api.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    gapiLoaded = true;
+  }
+  await new Promise(function(r) { window.gapi.load("client:auth2", r); });
+  await window.gapi.client.init({
+    clientId: S.settings.gmailClientId,
+    scope: "https://www.googleapis.com/auth/gmail.send",
+    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest"]
+  });
+  var auth = window.gapi.auth2.getAuthInstance();
+  if (!auth.isSignedIn.get()) await auth.signIn();
+  var raw = btoa(unescape(encodeURIComponent("To: "+to+"\r\nSubject: "+subject+"\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n"+body)))
+    .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  await window.gapi.client.gmail.users.messages.send({userId:"me", resource:{raw:raw}});
+}
+
+// ─── WhatsApp ──────────────────────────────────────────────────────────────────
+async function waSend(to, body) {
+  var r = await fetch("https://graph.facebook.com/v19.0/"+S.settings.whatsappPhoneId+"/messages", {
+    method: "POST",
+    headers: { Authorization: "Bearer "+S.settings.whatsappToken, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product:"whatsapp", to:to.replace(/\D/g,""), type:"text", text:{body:body} })
+  });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+async function notifyRow(rid, type) {
+  var rows = getRows();
+  var row = rows.find(function(x) { return x.r.id === rid; });
+  if (!row) return;
+  var vars = { nome:row.r.owner||"Morador", valor:fmtBRL(row.amt), vencimento:fdate(row.due), remetente:S.settings.senderName };
+  var isOverdue = type === "overdue";
+  var errors = [];
+  var resName = "Casa " + row.r.apt;
+  if (S.settings.gmailClientId && row.r.email) {
+    try {
+      await gmailSend(row.r.email, (isOverdue?"⚠️ Atraso":"Lembrete")+" – "+resName,
+        fill(isOverdue ? S.settings.emailOverdueTpl : S.settings.emailReminderTpl, vars));
+      addLog("Email", resName, type, "✅ Enviado");
+    } catch(e) { errors.push(e.message); addLog("Email", resName, type, "❌ "+e.message); }
+  } else {
+    addLog("Email", resName, type, row.r.email ? "⚠️ Sem Client ID" : "⚠️ Sem e-mail");
+  }
+  if (S.settings.whatsappToken && row.r.phone) {
+    try {
+      await waSend(row.r.phone, fill(isOverdue ? S.settings.waOverdueTpl : S.settings.waReminderTpl, vars));
+      addLog("WhatsApp", resName, type, "✅ Enviado");
+    } catch(e) { errors.push(e.message); addLog("WhatsApp", resName, type, "❌ "+e.message); }
+  } else {
+    addLog("WhatsApp", resName, type, row.r.phone ? "⚠️ Sem token" : "⚠️ Sem telefone");
+  }
+  if (errors.length) showToast("Erro: "+errors[0], "err");
+  else showToast("Notificação enviada para "+resName+"!");
+}
+
+// ─── Pluggy ────────────────────────────────────────────────────────────────────
+async function pluggyConnect() {
+  if (!S.settings.pluggyClientId || !S.settings.pluggyClientSecret) {
+    showToast("Configure Pluggy nas Configurações.", "err"); return;
+  }
+  setState({pluggyStep:1});
+  try {
+    var r = await fetch(PLUGGY+"/auth", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({clientId:S.settings.pluggyClientId, clientSecret:S.settings.pluggyClientSecret})
+    });
+    if (!r.ok) throw new Error("Credenciais inválidas.");
+    var key = (await r.json()).apiKey;
+    if (!S.settings.pluggyItemId) { setState({pluggyApiKey:key, pluggyStep:2}); return; }
+    var ar = await fetch(PLUGGY+"/accounts?itemId="+S.settings.pluggyItemId, {headers:{"X-API-KEY":key}});
+    setState({pluggyApiKey:key, pluggyAccounts:(await ar.json()).results, pluggyStep:2});
+  } catch(e) { setState({pluggyStep:0}); showToast(e.message,"err"); }
+}
+
+async function pluggySync() {
+  if (!S.pluggyApiKey || !S.pluggySelAcct) { showToast("Selecione uma conta.", "err"); return; }
+  setState({pluggySyncing:true});
+  try {
+    var from = new Date(S.selYear, S.selMonth, 1).toISOString().slice(0,10);
+    var to   = new Date(S.selYear, S.selMonth+1, 0).toISOString().slice(0,10);
+    var tr   = await fetch(PLUGGY+"/transactions?accountId="+S.pluggySelAcct+"&from="+from+"&to="+to+"&pageSize=500", {headers:{"X-API-KEY":S.pluggyApiKey}});
+    var txs  = (await tr.json()).results || [];
+    var newInv = Object.assign({}, S.invoices);
+    var matched = [];
+    var n = 0;
+    txs.forEach(function(tx) {
+      if (tx.type !== "CREDIT" && tx.amount <= 0) return;
+      var amt = Math.abs(tx.amount);
+      var res = S.residents.find(function(r) { return Math.abs(r.amount - amt) < 0.005; });
+      if (!res) return;
+      var txDate = tx.date ? tx.date.slice(0,10) : today();
+      var k = ikey(res.id, S.selMonth, S.selYear);
+      matched.push({apt:res.apt, owner:res.owner, txDate:txDate, amount:amt, txId:tx.id});
+      newInv[k] = Object.assign({}, newInv[k] || {residentId:res.id,month:S.selMonth,year:S.selYear,amount:amt,dueDate:"",notes:""}, {status:"paid",paidAt:txDate,txId:tx.id});
+      n++;
+    });
+    setState({invoices:newInv, pluggyMatches:matched, pluggyStep:3, pluggyLastSync:new Date().toLocaleString("pt-BR"), pluggySyncing:false});
+    showToast(n > 0 ? n+" pagamento(s) detectado(s)!" : "Nenhum pagamento novo encontrado.");
+  } catch(e) { setState({pluggySyncing:false}); showToast(e.message,"err"); }
+}
+
+// ─── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.style.background = type==="err" ? "#7f1d1d" : "#065f46";
+  el.style.color = "#fff";
+  el.style.display = "block";
+  clearTimeout(el._t);
+  el._t = setTimeout(function() { el.style.display = "none"; }, 3500);
+}
+
+// ─── Render helpers ────────────────────────────────────────────────────────────
+function renderModal(title, content, onClose) {
+  var mob = window.innerWidth < 769;
+  if (mob) {
+    return '<div class="sheet-overlay" onclick="if(event.target===this)'+onClose+'">'+
+      '<div class="sheet-box"><div class="sheet-handle"></div>'+
+      '<div class="sheet-title">'+title+'</div>'+content+'</div></div>';
+  }
+  return '<div class="modal-overlay" onclick="if(event.target===this)'+onClose+'">'+
+    '<div class="modal-box"><div class="modal-title">'+title+
+    '<button class="btn btn-ghost" onclick="'+onClose+'" style="padding:4px 8px">'+svgIcon(ICONS.x,18)+'</button></div>'+
+    content+'</div></div>';
+}
+
+function renderField(label, id, type, value, placeholder, extra) {
+  extra = extra || "";
+  return '<div class="form-group"><label class="form-label" for="'+id+'">'+label+'</label>'+
+    (type==="select" ? value :
+     type==="textarea" ? '<textarea class="form-input" id="'+id+'" rows="4">'+esc(value)+'</textarea>' :
+     '<input class="form-input" type="'+type+'" id="'+id+'" value="'+esc(value)+'" placeholder="'+esc(placeholder||"")+'"/>'+extra)+
+    '</div>';
+}
+
+// ─── Page: Home ────────────────────────────────────────────────────────────────
+function pageHome(rows, shown, paid, pend, over, grand, pct, mob) {
+  var overdueRows = rows.filter(function(x) { return x.st === "overdue"; });
+
+  var summaryCards = [
+    {l:"Total Previsto",  v:fmtBRL(grand), c:"#7c3aed", bg:"#f5f3ff", s:rows.length+" casas"},
+    {l:"Arrecadado",      v:fmtBRL(paid),  c:"#059669", bg:"#ecfdf5", s:rows.filter(function(x){return x.st==="paid";}).length+" pagas"},
+    {l:"Pendente",        v:fmtBRL(pend),  c:"#d97706", bg:"#fffbeb", s:rows.filter(function(x){return x.st==="pending";}).length+" pendentes"},
+    {l:"Em Atraso",       v:fmtBRL(over),  c:"#dc2626", bg:"#fef2f2", s:rows.filter(function(x){return x.st==="overdue";}).length+" atrasadas"}
+  ].map(function(c) {
+    return '<div class="stat-card" style="background:'+c.bg+'">'+
+      '<div class="stat-label" style="color:'+c.c+'">'+c.l+'</div>'+
+      '<div class="stat-value" style="color:'+c.c+'">'+c.v+'</div>'+
+      '<div class="stat-sub" style="color:'+c.c+'">'+c.s+'</div></div>';
+  }).join("");
+
+  var progressBar = '<div class="card card-pad" style="margin-bottom:16px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-weight:700;font-size:14px">'+MONTHS[S.selMonth]+' '+S.selYear+'</span>'+
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:14px;color:#7c3aed">'+pct+'% arrecadado</span>'+
+    '</div>'+
+    '<div class="progress-track">'+
+      '<div class="progress-paid" style="width:'+(grand>0?paid/grand*100:0)+'%"></div>'+
+      '<div class="progress-pending" style="width:'+(grand>0?pend/grand*100:0)+'%"></div>'+
+      '<div class="progress-overdue" style="width:'+(grand>0?over/grand*100:0)+'%"></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:16px;margin-top:10px">'+
+      [["#10b981","Pago"],["#f59e0b","Pendente"],["#ef4444","Atrasado"]].map(function(x){
+        return '<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#64748b"><span class="dot" style="background:'+x[0]+'"></span>'+x[1]+'</span>';
+      }).join("")+
+    '</div></div>';
+
+  var controls = '<div style="display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;padding-bottom:2px">'+
+    MONTHS_S.map(function(m,i){
+      return '<button class="pill '+(S.selMonth===i?"pill-on":"pill-off")+'" onclick="setState({selMonth:'+i+'})">'+m+'</button>';
+    }).join("")+
+  '</div>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+    '<div style="display:flex;gap:6px">'+
+      YEARS.map(function(y){
+        return '<button class="pill '+(S.selYear===y?"pill-on":"pill-off")+'" onclick="setState({selYear:'+y+'})">'+y+'</button>';
+      }).join("")+
+    '</div>'+
+    '<button class="btn btn-primary" onclick="setState({modal:\'addInv\'})">+ Lançar</button>'+
+  '</div>'+
+  '<div class="pills" style="margin-bottom:14px">'+
+    ["all","paid","pending","overdue"].map(function(s){
+      var cnt = s==="all" ? rows.length : rows.filter(function(x){return x.st===s;}).length;
+      return '<button class="pill '+(S.filter===s?"pill-on":"pill-off")+'" onclick="setState({filter:\''+s+'\'})">'+
+        (s==="all"?"Todas":STATUS[s].lb)+' ('+cnt+')</button>';
+    }).join("")+
+  '</div>';
+
+  var invoiceList;
+  if (mob) {
+    invoiceList = shown.length === 0 ? '<div style="text-align:center;padding:40px;color:#94a3b8">Nenhum registro.</div>' :
+      shown.map(function(row) {
+        var sc = STATUS[row.st];
+        var od = row.st==="overdue" && row.due ? ddiff(row.due) : null;
+        return '<div class="card res-card" onclick="openDetail('+row.r.id+')">'+
+          '<div class="res-avatar" style="background:'+(row.st==="paid"?"#ecfdf5":row.st==="overdue"?"#fef2f2":"#fffbeb")+';color:'+sc.dot+';font-size:17px">'+sc.ic+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-weight:700;font-size:14px">Casa '+esc(row.r.apt)+
+              (row.inv&&row.inv.txId?' <span style="font-size:9px;background:#d1fae5;color:#065f46;border-radius:5px;padding:2px 5px;font-weight:700">🏦</span>':"")+
+            '</div>'+
+            '<div style="font-size:12px;color:#94a3b8;margin-top:1px">'+esc(row.r.owner||"—")+'</div>'+
+            (row.due?'<div style="font-size:11px;color:'+(od&&od>0?"#ef4444":"#94a3b8")+';margin-top:1px">'+(od&&od>0?od+"d em atraso":"Vence "+fdate(row.due))+'</div>':"")+
+          '</div>'+
+          '<div style="text-align:right;flex-shrink:0">'+
+            '<div style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:13px">'+fmtBRL(row.amt)+'</div>'+
+            '<span class="badge '+sc.cls+'" style="margin-top:5px">'+sc.lb+'</span>'+
+          '</div></div>';
+      }).join("");
+  } else {
+    invoiceList = '<div class="table-wrap">'+
+      '<table><thead><tr>'+
+        '<th>Casa</th><th>Morador</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Alterar</th><th>Notificar</th>'+
+      '</tr></thead><tbody>'+
+      (shown.length===0?'<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:40px">Nenhum registro.</td></tr>':"")+
+      shown.map(function(row) {
+        var sc = STATUS[row.st];
+        var od = row.st==="overdue"&&row.due ? ddiff(row.due) : null;
+        return '<tr onclick="openDetail('+row.r.id+')">'+
+          '<td><strong>Casa '+esc(row.r.apt)+'</strong>'+(row.inv&&row.inv.txId?' <span style="font-size:9px;background:#d1fae5;color:#065f46;border-radius:5px;padding:2px 5px;font-weight:700">🏦</span>':"")+
+            (row.inv&&row.inv.paidAt?'<div style="font-size:11px;color:#10b981">'+fdate(row.inv.paidAt)+'</div>':"")+
+          '</td>'+
+          '<td style="color:#64748b">'+esc(row.r.owner||"—")+'</td>'+
+          '<td><span style="font-family:\'JetBrains Mono\',monospace;font-weight:600">'+fmtBRL(row.amt)+'</span></td>'+
+          '<td style="color:'+(od&&od>0?"#ef4444":"#94a3b8")+'">'+fdate(row.due)+(od&&od>0?'<div style="font-size:11px;color:#ef4444">'+od+'d atrasado</div>':"")+
+          '</td>'+
+          '<td onclick="event.stopPropagation()"><span class="badge '+sc.cls+'"><span class="dot" style="background:'+sc.dot+'"></span>'+sc.lb+'</span></td>'+
+          '<td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">'+
+            ["paid","pending","overdue"].map(function(s){
+              return '<button class="btn" style="padding:4px 10px;font-size:11px;border-radius:8px;background:'+(row.st===s?STATUS[s].dot:"#f1f5f9")+';color:'+(row.st===s?"#fff":"#64748b")+'" onclick="chgSt(\''+row.k+'\','+row.r.id+',\''+s+'\')">'+STATUS[s].lb+'</button>';
+            }).join("")+
+          '</div></td>'+
+          '<td onclick="event.stopPropagation()"><div style="display:flex;gap:6px">'+
+            '<button class="btn" style="padding:5px 10px;font-size:11px;border-radius:8px;background:#eff6ff;color:#1d4ed8;'+(row.st==="paid"?"opacity:0.35;cursor:default":"")+'" '+(row.st==="paid"?"disabled":"")+' onclick="notifyRow('+row.r.id+',\'reminder\')">📧</button>'+
+            '<button class="btn" style="padding:5px 10px;font-size:11px;border-radius:8px;background:#fef2f2;color:#991b1b;'+(row.st!=="overdue"?"opacity:0.35;cursor:default":"")+'" '+(row.st!=="overdue"?"disabled":"")+' onclick="notifyRow('+row.r.id+',\'overdue\')">⚠️</button>'+
+          '</div></td></tr>';
+      }).join("")+
+      '</tbody></table></div>';
+  }
+
+  return '<div class="grid-4" style="margin-bottom:16px">'+summaryCards+'</div>'+
+    progressBar + controls + invoiceList +
+    (overdueRows.length>0?'<button class="btn btn-danger" style="width:100%;margin-top:14px;padding:12px;font-size:13px" onclick="notifyAllOverdue()">⚠️ Notificar Todos em Atraso ('+overdueRows.length+')</button>':"");
+}
+
+// ─── Page: Moradores ───────────────────────────────────────────────────────────
+function pageMoradores(mob) {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'+
+    '<h2 style="font-size:'+(mob?"18px":"22px")+';font-weight:800">Moradores</h2>'+
+    '<button class="btn btn-primary" onclick="openEditRes(null)">+ Nova Casa</button>'+
+  '</div>'+
+  '<div class="'+(mob?"":"grid-auto")+'">'+
+    S.residents.map(function(r) {
+      return '<div class="card" style="padding:18px;cursor:pointer;margin-bottom:'+(mob?"12px":"0")+'" onclick="openEditRes('+r.id+')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
+          '<div>'+
+            '<div style="font-weight:800;font-size:15px">Casa '+esc(r.apt)+'</div>'+
+            '<div style="font-size:13px;color:#64748b;margin-top:2px">'+esc(r.owner||"Sem nome")+'</div>'+
+          '</div>'+
+          '<div style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:15px;color:#7c3aed">'+fmtBRL(r.amount)+'</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;gap:7px">'+
+          [["📧",r.email,"email"],["📱",r.phone,"phone"]].map(function(x){
+            return '<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border-radius:9px;padding:7px 11px">'+
+              '<span>'+x[0]+'</span>'+
+              '<span style="font-size:12px;font-family:\'JetBrains Mono\',monospace;color:'+(x[1]?"#334155":"#cbd5e1")+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+esc(x[1]||"Não cadastrado")+'</span>'+
+              (!x[1]?'<span style="font-size:9px;background:#fef9c3;color:#92400e;border-radius:5px;padding:2px 6px;font-weight:700;flex-shrink:0">!</span>':"")+
+            '</div>';
+          }).join("")+
+        '</div></div>';
+    }).join("")+
+  '</div>';
+}
+
+// ─── Page: Alertas ─────────────────────────────────────────────────────────────
+function pageAlertas(rows, mob) {
+  var overdueCount  = rows.filter(function(x){return x.st==="overdue";}).length;
+  var pendingCount  = rows.filter(function(x){return x.st==="pending"&&x.due;}).length;
+  return '<h2 style="font-size:'+(mob?"18px":"22px")+';font-weight:800;margin-bottom:18px">Notificações</h2>'+
+  '<div class="'+(mob?"":"grid-2")+'" style="margin-bottom:24px'+(mob?";display:flex;flex-direction:column;gap:10px":"")+'">'+
+    '<button class="btn btn-danger" style="padding:14px;font-size:13px;width:100%;justify-content:center" onclick="notifyAllOverdue()">⚠️ Cobranças de Atraso ('+overdueCount+')</button>'+
+    '<button class="btn btn-primary" style="padding:14px;font-size:13px;width:100%;justify-content:center;background:#1e40af" onclick="notifyAllPending()">📧 Lembretes Pendentes ('+pendingCount+')</button>'+
+  '</div>'+
+  '<div class="section-title">Log de Envios</div>'+
+  '<div class="card" style="overflow:hidden">'+
+    (S.notifLog.length===0?'<div style="padding:40px;text-align:center;color:#94a3b8;font-size:14px">Nenhum envio ainda.</div>':"")+
+    S.notifLog.map(function(l,i){
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:'+(i<S.notifLog.length-1?"1px solid #f1f5f9":"none")+'">'+
+        '<div style="width:36px;height:36px;border-radius:10px;background:'+(l.ch==="Email"?"#eff6ff":"#f0fdf4")+';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+(l.ch==="Email"?"📧":"💬")+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-weight:600;font-size:13px">'+esc(l.res)+'</div>'+
+          '<div style="font-size:12px;color:'+(l.type==="overdue"?"#ef4444":"#f59e0b")+';font-weight:600;margin-top:1px">'+(l.type==="overdue"?"Cobrança de Atraso":"Lembrete")+'</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div style="font-size:12px;font-weight:600">'+esc(l.st)+'</div>'+
+          '<div style="font-size:11px;color:#94a3b8;font-family:\'JetBrains Mono\',monospace;margin-top:1px">'+l.ts.slice(0,5)+'</div>'+
+        '</div></div>';
+    }).join("")+
+  '</div>';
+}
+
+// ─── Page: Banco (Pluggy) ──────────────────────────────────────────────────────
+function pageBanco(mob) {
+  var step = S.pluggyStep;
+  var header = '<h2 style="font-size:'+(mob?"18px":"22px")+';font-weight:800;margin-bottom:6px">Open Finance</h2>'+
+    '<p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Conecte sua conta bancária via Pluggy para detectar pagamentos automaticamente pelo valor único de cada casa.</p>';
+
+  var howItWorks = '<div class="card card-pad" style="margin-bottom:16px">'+
+    '<div style="font-weight:700;font-size:14px;margin-bottom:14px">Como funciona</div>'+
+    [["1","Crie conta gratuita","pluggy.ai → Dashboard → Criar App"],
+     ["2","Configure credenciais","Client ID e Secret em Configurações"],
+     ["3","Informe o Item ID","ID da conexão bancária da conta"],
+     ["4","Sincronize","O app detecta pagamentos automaticamente"]].map(function(x){
+      return '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px">'+
+        '<div style="width:26px;height:26px;border-radius:50%;background:#7c3aed;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+x[0]+'</div>'+
+        '<div><div style="font-weight:600;font-size:13px">'+x[1]+'</div><div style="font-size:12px;color:#94a3b8;margin-top:1px">'+x[2]+'</div></div></div>';
+    }).join("")+
+  '</div>';
+
+  var detection = '<div class="card card-pad" style="margin-bottom:16px">'+
+    '<div style="font-weight:700;font-size:14px;margin-bottom:12px">🔍 Identificação por valor único</div>'+
+    '<div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.6">Cada casa paga um valor único (centavos = número da casa):</div>'+
+    S.residents.map(function(r){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:#f8fafc;border-radius:9px;margin-bottom:6px;font-size:13px">'+
+        '<span style="font-weight:600">Casa '+esc(r.apt)+'</span>'+
+        '<span style="font-family:\'JetBrains Mono\',monospace;color:#7c3aed;font-weight:700">'+fmtBRL(r.amount)+'</span></div>';
+    }).join("")+
+  '</div>';
+
+  var connector = "";
+  if (step === 0) {
+    connector = '<button class="btn btn-primary" style="width:100%;padding:14px;font-size:14px;justify-content:center" onclick="pluggyConnect()">🏦 Conectar via Pluggy</button>';
+  } else if (step === 1) {
+    connector = '<div style="text-align:center;padding:20px;color:#7c3aed;font-weight:600">⏳ Autenticando...</div>';
+  } else if (step === 2) {
+    connector = '<div class="card card-pad">'+
+      '<div style="font-weight:700;font-size:14px;margin-bottom:14px">Selecionar Conta</div>'+
+      (S.pluggyAccounts.length === 0 ?
+        '<div class="form-group"><label class="form-label">Item ID da Pluggy</label>'+
+        '<input class="form-input" id="pluggy-item" value="'+esc(S.settings.pluggyItemId)+'" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></div>'+
+        '<button class="btn btn-primary" style="width:100%;justify-content:center" onclick="pluggyFetchAccounts()">Buscar Contas</button>' :
+        S.pluggyAccounts.map(function(a){
+          return '<div onclick="setState({pluggySelAcct:\''+a.id+'\'})" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;border:2px solid '+(S.pluggySelAcct===a.id?"#7c3aed":"#e2e8f0")+';margin-bottom:8px;background:'+(S.pluggySelAcct===a.id?"#f5f3ff":"#fff")+';cursor:pointer">'+
+            '<span style="font-size:22px">🏦</span>'+
+            '<div style="flex:1"><div style="font-weight:600;font-size:13px">'+esc(a.name)+'</div><div style="font-size:12px;color:#94a3b8">****'+esc((a.number||"").slice(-4)||"——")+' · '+esc(a.type||"")+'</div></div>'+
+            (S.pluggySelAcct===a.id?'<span style="color:#7c3aed;font-weight:700;font-size:18px">✓</span>':"")+
+          '</div>';
+        }).join("")+
+        '<button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;justify-content:center;margin-top:4px" '+(S.pluggySyncing||!S.pluggySelAcct?"disabled":"")+' onclick="pluggySync()">'+
+          (S.pluggySyncing?"⏳ Sincronizando...":"↻ Sincronizar Extrato")+
+        '</button>'
+      )+'</div>';
+  } else if (step === 3) {
+    connector = '<div class="card card-pad" style="background:#ecfdf5;border:1.5px solid #6ee7b7;margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:14px;color:#065f46;margin-bottom:4px">✅ Conectado e sincronizado</div>'+
+      '<div style="font-size:13px;color:#065f46">Última sync: '+esc(S.pluggyLastSync||"—")+' · '+S.pluggyMatches.length+' pagamento(s) detectado(s)</div>'+
+    '</div>'+
+    (S.pluggyMatches.length>0?'<div class="card card-pad" style="margin-bottom:12px">'+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:12px">Pagamentos detectados — '+MONTHS[S.selMonth]+'</div>'+
+      S.pluggyMatches.map(function(m){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">'+
+          '<div><div style="font-weight:600;font-size:13px">Casa '+esc(m.apt)+(m.owner?" – "+esc(m.owner):"")+'</div>'+
+          '<div style="font-size:12px;color:#94a3b8">'+fdate(m.txDate)+'</div></div>'+
+          '<div style="text-align:right"><div style="font-family:\'JetBrains Mono\',monospace;font-weight:700;color:#059669">'+fmtBRL(m.amount)+'</div>'+
+          '<span class="badge badge-paid" style="font-size:10px">✓ Auto</span></div></div>';
+      }).join("")+
+    '</div>':"")+'<button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;justify-content:center" '+(S.pluggySyncing?"disabled":"")+' onclick="pluggySync()">'+
+      (S.pluggySyncing?"⏳ Sincronizando...":"↻ Sincronizar Novamente")+'</button>';
+  }
+
+  return header + (mob?"":
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+howItWorks+detection+'</div>') +
+    (mob?howItWorks+detection:"") + connector;
+}
+
+// ─── Page: Config ──────────────────────────────────────────────────────────────
+function pageConfig(mob) {
+  var ss = S.settings;
+  var tplVars = '<div style="font-size:12px;color:#7c3aed;background:#f5f3ff;border-radius:9px;padding:8px 12px;margin-bottom:14px">'+
+    'Variáveis: <code>{nome}</code> <code>{valor}</code> <code>{vencimento}</code> <code>{remetente}</code></div>';
+
+  return '<h2 style="font-size:'+(mob?"18px":"22px")+';font-weight:800;margin-bottom:20px">Configurações</h2>'+
+  '<div class="'+(mob?"":"grid-2")+'">'+
+    '<div>'+
+      '<div class="card card-pad" style="margin-bottom:14px">'+
+        '<div class="section-title" style="font-size:13px;font-weight:800;color:#0f172a;letter-spacing:0;text-transform:none;margin-bottom:14px">🏦 Pluggy – Open Finance</div>'+
+        renderField("Client ID","cfg-plid","text",ss.pluggyClientId,"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","")+
+        renderField("Client Secret","cfg-plcs","password",ss.pluggyClientSecret,"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","")+
+        renderField("Item ID (conexão bancária)","cfg-plitem","text",ss.pluggyItemId,"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","")+
+        renderField("Valor base da taxa (R$)","cfg-base","number",String(ss.baseAmount),"300","")+
+        '<div class="info-box">Crie sua conta em pluggy.ai → Dashboard → Novo App. O Item ID é gerado ao conectar seu banco no Pluggy Connect Widget.</div>'+
+      '</div>'+
+      '<div class="card card-pad" style="margin-bottom:14px">'+
+        '<div class="section-title" style="font-size:13px;font-weight:800;color:#0f172a;letter-spacing:0;text-transform:none;margin-bottom:14px">📧 Gmail OAuth 2.0</div>'+
+        renderField("Client ID do Google","cfg-gcid","text",ss.gmailClientId,"xxxx.apps.googleusercontent.com","")+
+        '<div class="info-box">console.cloud.google.com → APIs → Gmail API → Credenciais → OAuth 2.0</div>'+
+      '</div>'+
+      '<div class="card card-pad" style="margin-bottom:14px">'+
+        '<div class="section-title" style="font-size:13px;font-weight:800;color:#0f172a;letter-spacing:0;text-transform:none;margin-bottom:14px">💬 WhatsApp Business API</div>'+
+        renderField("Token de Acesso","cfg-wat","password",ss.whatsappToken,"EAAxxxxx...","")+
+        renderField("Phone Number ID","cfg-wapid","text",ss.whatsappPhoneId,"1234567890","")+
+        '<div class="info-box">developers.facebook.com → WhatsApp → API Setup. Número: DDI+DDD+número (ex: 5511999998888)</div>'+
+      '</div>'+
+      '<div class="card card-pad" style="margin-bottom:14px">'+
+        '<div class="section-title" style="font-size:13px;font-weight:800;color:#0f172a;letter-spacing:0;text-transform:none;margin-bottom:14px">⚙️ Geral</div>'+
+        renderField("Nome do Remetente","cfg-sn","text",ss.senderName,"")+
+      '</div>'+
+    '</div>'+
+    '<div>'+
+      '<div class="card card-pad" style="margin-bottom:14px">'+
+        '<div class="section-title" style="font-size:13px;font-weight:800;color:#0f172a;letter-spacing:0;text-transform:none;margin-bottom:8px">✉️ Templates de Mensagem</div>'+
+        tplVars+
+        renderField("E-mail – Lembrete","cfg-ert","textarea",ss.emailReminderTpl,"")+
+        renderField("E-mail – Atraso","cfg-eot","textarea",ss.emailOverdueTpl,"")+
+        renderField("WhatsApp – Lembrete","cfg-wrt","textarea",ss.waReminderTpl,"")+
+        renderField("WhatsApp – Atraso","cfg-wot","textarea",ss.waOverdueTpl,"")+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+  '<button class="btn btn-primary" style="padding:12px 28px;font-size:14px" onclick="saveSettings()">💾 Salvar Configurações</button>';
+}
+
+// ─── Detail modal ──────────────────────────────────────────────────────────────
+function renderDetail(dr) {
+  var sc = STATUS[dr.st];
+  var content = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">'+
+    '<div>'+
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:26px;font-weight:700">'+fmtBRL(dr.amt)+'</div>'+
+      '<div style="font-size:13px;color:#64748b;margin-top:4px">Vencimento: '+fdate(dr.due)+'</div>'+
+      (dr.inv&&dr.inv.txId?'<div style="font-size:12px;color:#059669;margin-top:4px;font-weight:600">🏦 Open Finance · '+fdate(dr.inv.paidAt)+'</div>':"")+
+    '</div>'+
+    '<span class="badge '+sc.cls+'" style="font-size:13px;padding:6px 14px">'+sc.lb+'</span>'+
+  '</div>'+
+  '<div class="section-title">Alterar Status</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">'+
+    ["paid","pending","overdue"].map(function(s){
+      return '<button onclick="chgSt(\''+dr.k+'\','+dr.r.id+',\''+s+'\');setState({detailRow:Object.assign({},S.detailRow,{st:\''+s+'\'})})" style="padding:12px 6px;border-radius:12px;border:none;cursor:pointer;font-family:\'Outfit\',sans-serif;font-size:13px;font-weight:700;background:'+(dr.st===s?STATUS[s].dot:"#f1f5f9")+';color:'+(dr.st===s?"#fff":"#64748b")+'">'+STATUS[s].lb+'</button>';
+    }).join("")+
+  '</div>'+
+  '<div class="section-title">Notificar</div>'+
+  '<div style="display:flex;flex-direction:column;gap:10px">'+
+    '<button class="btn" style="width:100%;justify-content:center;padding:12px;font-size:13px;background:#eff6ff;color:#1d4ed8;'+(dr.st==="paid"?"opacity:0.4;cursor:default":"")+'" '+(dr.st==="paid"?"disabled":"")+' onclick="notifyRow('+dr.r.id+',\'reminder\');setState({detailRow:null})">📧 Enviar Lembrete de Vencimento</button>'+
+    '<button class="btn" style="width:100%;justify-content:center;padding:12px;font-size:13px;background:#fef2f2;color:#991b1b;'+(dr.st!=="overdue"?"opacity:0.4;cursor:default":"")+'" '+(dr.st!=="overdue"?"disabled":"")+' onclick="notifyRow('+dr.r.id+',\'overdue\');setState({detailRow:null})">⚠️ Enviar Cobrança de Atraso</button>'+
+  '</div>';
+  return renderModal("Casa "+esc(dr.r.apt)+(dr.r.owner?" – "+esc(dr.r.owner):""), content, "setState({detailRow:null})");
+}
+
+// ─── Edit resident modal ───────────────────────────────────────────────────────
+function renderEditRes(er) {
+  var content =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+      renderField("Número da Casa","er-apt","text",er.apt||"","11")+
+      renderField("Família / Morador","er-own","text",er.owner||"","Silva")+
+    '</div>'+
+    renderField("E-mail","er-eml","email",er.email||"","morador@email.com")+
+    renderField("Telefone WhatsApp (DDI+DDD+nº)","er-phn","text",er.phone||"","5511999998888")+
+    renderField("Valor único (R$)","er-amt","number",String(er.amount||""),"300.11")+
+    '<div class="info-box" style="margin-bottom:14px">💡 O valor deve ser único por casa para identificação automática (ex: 300,01 / 300,02…)</div>'+
+    '<button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:14px" onclick="saveResident()">Salvar</button>'+
+    (er.id?'<button class="btn" style="width:100%;justify-content:center;padding:12px;font-size:13px;margin-top:8px;background:#fef2f2;color:#991b1b" onclick="removeResident('+er.id+')">🗑️ Remover Casa</button>':"");
+  return renderModal(er.id?"Editar Casa":"Nova Casa", content, "setState({editRes:null})");
+}
+
+// ─── Add invoice modal ─────────────────────────────────────────────────────────
+function renderAddInv() {
+  var resOptions = '<select class="form-input" id="ai-res">'+
+    '<option value="">Selecione...</option>'+
+    S.residents.map(function(r){ return '<option value="'+r.id+'">Casa '+esc(r.apt)+(r.owner?" – "+esc(r.owner):"")+'</option>'; }).join("")+
+  '</select>';
+  var monOptions = '<select class="form-input" id="ai-mon">'+MONTHS_S.map(function(m,i){ return '<option value="'+i+'"'+(i===S.selMonth?" selected":"")+'>'+m+'</option>'; }).join("")+'</select>';
+  var yrOptions  = '<select class="form-input" id="ai-yr">'+YEARS.map(function(y){ return '<option value="'+y+'"'+(y===S.selYear?" selected":"")+'>'+y+'</option>'; }).join("")+'</select>';
+  var stOptions  = '<select class="form-input" id="ai-st"><option value="pending">Pendente</option><option value="paid">Pago</option><option value="overdue">Atrasado</option></select>';
+
+  var content =
+    renderField("Casa","ai-res","select",resOptions)+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+      renderField("Mês","ai-mon","select",monOptions)+
+      renderField("Ano","ai-yr","select",yrOptions)+
+    '</div>'+
+    renderField("Valor (R$)","ai-amt","number","","0")+
+    renderField("Data de Vencimento","ai-due","date","")+
+    renderField("Status","ai-st","select",stOptions)+
+    renderField("Observações","ai-nt","text","","Opcional")+
+    '<button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:14px" onclick="saveInvoice()">Salvar</button>';
+  return renderModal("Lançar Cobrança", content, "setState({modal:null})");
+}
+
+// ─── Main render ───────────────────────────────────────────────────────────────
+function render() {
+  autoOverdue();
+  var mob = window.innerWidth < 769;
+  var rows = getRows();
+  var shown = S.filter==="all" ? rows : rows.filter(function(x){ return x.st===S.filter; });
+  var paid  = rows.filter(function(x){return x.st==="paid";}).reduce(function(s,x){return s+x.amt;},0);
+  var pend  = rows.filter(function(x){return x.st==="pending";}).reduce(function(s,x){return s+x.amt;},0);
+  var over  = rows.filter(function(x){return x.st==="overdue";}).reduce(function(s,x){return s+x.amt;},0);
+  var grand = paid + pend + over;
+  var pct   = grand > 0 ? Math.round(paid/grand*100) : 0;
+
+  var navItems = [
+    {l:"Início",    icon:ICONS.home},
+    {l:"Banco",     icon:ICONS.bank},
+    {l:"Moradores", icon:ICONS.people},
+    {l:"Alertas",   icon:ICONS.bell},
+    {l:"Config.",   icon:ICONS.settings}
+  ];
+
+  var pages = [
+    pageHome(rows, shown, paid, pend, over, grand, pct, mob),
+    pageBanco(mob),
+    pageMoradores(mob),
+    pageAlertas(rows, mob),
+    pageConfig(mob)
+  ];
+
+  var syncBadge = S.firebaseReady ?
+    '<div class="sync-badge">'+svgIcon(ICONS.check,12)+' Firebase sincronizado</div>' :
+    '<div class="sync-badge offline">⚠️ Modo offline</div>';
+
+  var sidebar = '<div class="sidebar">'+
+    '<div class="sidebar-logo">'+
+      '<div style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#7c3aed;margin-bottom:4px">Gestão Condominial</div>'+
+      '<div style="font-size:20px;font-weight:900">Vila <span style="color:#a78bfa">Flora</span></div>'+
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:14px;color:#a78bfa;font-weight:700;margin-top:8px">'+fmtBRL(grand)+'</div>'+
+      '<div style="font-size:11px;color:#475569;margin-top:2px">'+MONTHS[S.selMonth]+' '+S.selYear+'</div>'+
+      '<div style="margin-top:10px">'+syncBadge+'</div>'+
+    '</div>'+
+    '<div class="sidebar-nav">'+
+      navItems.map(function(n,i){
+        return '<button class="'+(S.tab===i?"active":"")+'" onclick="setState({tab:'+i+'})">'+
+          svgIcon(n.icon,18)+n.l+'</button>';
+      }).join("")+
+    '</div>'+
+    '<div class="sidebar-footer">'+new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"})+'</div>'+
+  '</div>';
+
+  var mobileHeader = '<div style="background:#0f172a;color:#fff;padding:44px 16px 14px">'+
+    '<div style="font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#7c3aed;margin-bottom:3px">Gestão Condominial</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+      '<div style="font-size:20px;font-weight:900">Vila <span style="color:#a78bfa">Flora</span></div>'+
+      '<div style="text-align:right">'+
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:16px;color:#a78bfa">'+fmtBRL(grand)+'</div>'+
+        syncBadge+
+      '</div>'+
+    '</div>'+
+  '</div>';
+
+  var bottomNav = '<div class="bottom-nav" style="display:flex">'+
+    navItems.map(function(n,i){
+      return '<button style="flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;color:'+(S.tab===i?"#7c3aed":"#94a3b8")+';font-size:9px;font-weight:700;border:none;background:none;cursor:pointer" onclick="setState({tab:'+i+'})">'+
+        svgIcon(n.icon,22)+n.l+(S.tab===i?'<div style="width:4px;height:4px;border-radius:50%;background:#7c3aed"></div>':"")+
+      '</button>';
+    }).join("")+
+  '</div>';
+
+  var modals = "";
+  if (S.detailRow) modals += renderDetail(S.detailRow);
+  if (S.editRes !== null) modals += renderEditRes(S.editRes);
+  if (S.modal === "addInv") modals += renderAddInv();
+
+  document.getElementById("app").innerHTML = mob ?
+    mobileHeader + '<div>' + pages[S.tab] + '</div>' + bottomNav + modals :
+    '<div class="app-shell">'+sidebar+
+      '<div class="main">'+
+        '<div class="topbar">'+
+          '<div style="font-size:17px;font-weight:800">'+navItems[S.tab].l+'</div>'+
+          syncBadge+
+        '</div>'+
+        '<div class="page">'+pages[S.tab]+'</div>'+
+      '</div>'+
+    '</div>' + modals;
+}
+
+// ─── Global handlers ───────────────────────────────────────────────────────────
+window.setState = setState;
+window.showToast = showToast;
+window.notifyRow = notifyRow;
+window.pluggyConnect = pluggyConnect;
+window.pluggySync = pluggySync;
+
+window.pluggyFetchAccounts = async function() {
+  var itemId = document.getElementById("pluggy-item");
+  if (itemId) { var v = itemId.value.trim(); if (v) { S.settings.pluggyItemId = v; fbSaveDebounced("settings", S.settings); } }
+  try {
+    var ar = await fetch(PLUGGY+"/accounts?itemId="+S.settings.pluggyItemId, {headers:{"X-API-KEY":S.pluggyApiKey}});
+    setState({pluggyAccounts:(await ar.json()).results});
+  } catch(e) { showToast(e.message,"err"); }
+};
+
+window.openDetail = function(rid) {
+  var rows = getRows();
+  var row = rows.find(function(x){ return x.r.id===rid; });
+  if (row) setState({detailRow:row});
+};
+
+window.openEditRes = function(rid) {
+  if (rid) {
+    var r = S.residents.find(function(x){ return x.id===rid; });
+    if (r) setState({editRes:Object.assign({},r)});
+  } else {
+    setState({editRes:{id:null,apt:"",owner:"",email:"",phone:"",amount:""}});
+  }
+};
+
+window.chgSt = function(k, rid, st) {
+  var r = S.residents.find(function(x){ return x.id===rid; });
+  if (r) changeStatus(k, r, st);
+};
+
+window.saveResident = function() {
+  var apt = document.getElementById("er-apt").value.trim();
+  if (!apt) { showToast("Informe o número da casa.","err"); return; }
+  var er = S.editRes;
+  var data = {
+    id: er.id || Date.now(),
+    apt: apt,
+    owner: document.getElementById("er-own").value,
+    email: document.getElementById("er-eml").value,
+    phone: document.getElementById("er-phn").value,
+    amount: parseFloat(document.getElementById("er-amt").value) || er.amount || 0
+  };
+  var residents = er.id ? S.residents.map(function(r){ return r.id===er.id?data:r; }) : S.residents.concat([data]);
+  setState({residents:residents, editRes:null});
+  showToast("Casa salva! ☁️");
+};
+
+window.removeResident = function(rid) {
+  if (!confirm("Remover esta casa?")) return;
+  setState({residents:S.residents.filter(function(r){ return r.id!==rid; }), editRes:null});
+};
+
+window.saveInvoice = function() {
+  var rid = document.getElementById("ai-res").value;
+  if (!rid) { showToast("Selecione uma casa.","err"); return; }
+  var r = S.residents.find(function(x){ return x.id===parseInt(rid); });
+  var m = parseInt(document.getElementById("ai-mon").value);
+  var y = parseInt(document.getElementById("ai-yr").value);
+  var k = ikey(rid, m, y);
+  var inv = Object.assign({}, S.invoices, {});
+  inv[k] = {
+    residentId: parseInt(rid), month: m, year: y,
+    amount: parseFloat(document.getElementById("ai-amt").value) || r.amount,
+    dueDate: document.getElementById("ai-due").value,
+    status: document.getElementById("ai-st").value,
+    notes: document.getElementById("ai-nt").value
+  };
+  setState({invoices:inv, modal:null});
+  showToast("Lançamento salvo! ☁️");
+};
+
+window.saveSettings = function() {
+  var get = function(id){ var el=document.getElementById(id); return el?el.value:""; };
+  var updated = Object.assign({}, S.settings, {
+    pluggyClientId:     get("cfg-plid"),
+    pluggyClientSecret: get("cfg-plcs"),
+    pluggyItemId:       get("cfg-plitem"),
+    baseAmount:         parseFloat(get("cfg-base"))||300,
+    gmailClientId:      get("cfg-gcid"),
+    whatsappToken:      get("cfg-wat"),
+    whatsappPhoneId:    get("cfg-wapid"),
+    senderName:         get("cfg-sn"),
+    emailReminderTpl:   get("cfg-ert"),
+    emailOverdueTpl:    get("cfg-eot"),
+    waReminderTpl:      get("cfg-wrt"),
+    waOverdueTpl:       get("cfg-wot")
+  });
+  setState({settings:updated});
+  showToast("Configurações salvas! ☁️");
+};
+
+window.notifyAllOverdue = async function() {
+  var rows = getRows().filter(function(x){ return x.st==="overdue"; });
+  for (var i=0; i<rows.length; i++) await notifyRow(rows[i].r.id, "overdue");
+};
+
+window.notifyAllPending = function() {
+  var rows = getRows().filter(function(x){ return x.st==="pending"&&x.due; });
+  rows.forEach(function(row){ notifyRow(row.r.id, "reminder"); });
+};
+
+window.addEventListener("resize", render);
+
+// ─── Boot ──────────────────────────────────────────────────────────────────────
+(async function boot() {
+  var ok = fbInit();
+  if (ok) {
+    await fbLoadAll();
+    startListeners();
+    S.firebaseReady = true;
+  }
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  render();
+})();
+</script>
+</body>
+</html>
